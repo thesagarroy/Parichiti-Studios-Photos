@@ -63,12 +63,34 @@
     const DPI = 300;
     const MM_TO_INCH = 25.4;
 
+    // Standard Photo Size Presets (dimensions in mm)
+    const PHOTO_PRESETS = {
+        '35x45': { width: 35, height: 45, label: 'India / UK / Schengen (35×45 mm)' },
+        '51x51': { width: 51, height: 51, label: 'USA / India OCI 2×2" (51×51 mm)' },
+        '50x70': { width: 50, height: 70, label: 'Canada Passport / PR (50×70 mm)' },
+        '40x50': { width: 40, height: 50, label: 'Bangladesh Passport / Visa (40×50 mm)' },
+        '35x50': { width: 35, height: 50, label: 'Malaysia / Singapore Visa (35×50 mm)' },
+        '33x48': { width: 33, height: 48, label: 'China Passport / Visa (33×48 mm)' },
+        '40x60': { width: 40, height: 60, label: 'UAE / Dubai / Saudi Visa (40×60 mm)' },
+        '35x45_au': { width: 35, height: 45, label: 'Australia / New Zealand (35×45 mm)' },
+        '35x45_jp': { width: 35, height: 45, label: 'Japan / South Korea (35×45 mm)' },
+        '35x45_sg': { width: 35, height: 45, label: 'Singapore Passport (35×45 mm)' },
+        '25x35': { width: 25, height: 35, label: 'India PAN Card / Exam (25×35 mm)' },
+        '25x30': { width: 25, height: 30, label: 'Stamp Size - Standard (25×30 mm)' },
+        '30.5x38': { width: 30.5, height: 38, label: 'Stamp Size - Classic (30.5×38 mm)' },
+        '20x25': { width: 20, height: 25, label: 'Stamp Size - Mini (20×25 mm)' },
+        '38x51': { width: 38.1, height: 50.8, label: '1.5 × 2 Inch (38.1×50.8 mm)' },
+        '63.5x89': { width: 63.5, height: 88.9, label: '2R Wallet Size (63.5×89 mm)' },
+        '89x127': { width: 88.9, height: 127, label: '3R Card Photo (89×127 mm)' },
+        '101.6x152.4': { width: 101.6, height: 152.4, label: '4R Print Size (101.6×152.4 mm)' }
+    };
+
     // State
     let originalImage = null;
     let cropper = null;
     let croppedCanvas = null;
-    let PHOTO_WIDTH = 413;
-    let PHOTO_HEIGHT = 531;
+    let PHOTO_WIDTH = Math.round((35 / MM_TO_INCH) * DPI);
+    let PHOTO_HEIGHT = Math.round((45 / MM_TO_INCH) * DPI);
     let adjustments = {
         brightness: 0,
         contrast: 100,
@@ -78,6 +100,16 @@
         blur: 0
     };
     let backgroundColor = '#ffffff';
+    let borderSettings = {
+        enabled: true,
+        width: 3,
+        color: '#000000'
+    };
+    let cutLineSettings = {
+        enabled: true,
+        style: 'dashed',
+        color: '#333333'
+    };
 
     // DOM Elements
     const photoUpload = document.getElementById('photoUpload');
@@ -93,6 +125,25 @@
     const cropToolsCard = document.getElementById('cropToolsCard');
     const adjustmentsCard = document.getElementById('adjustmentsCard');
     const sizeSelectionCard = document.getElementById('sizeSelectionCard');
+    const editorPhotoSize = document.getElementById('editorPhotoSize');
+    const editorPhotoSpacingSelect = document.getElementById('editorPhotoSpacingSelect');
+    const customSizeInputs = document.getElementById('customSizeInputs');
+    const customWidth = document.getElementById('customWidth');
+    const customHeight = document.getElementById('customHeight');
+    const cropAspectButtons = document.querySelectorAll('#cropAspectButtons .aspect-btn');
+    
+    const borderCard = document.getElementById('borderCard');
+    const enableBorder = document.getElementById('enableBorder');
+    const borderWidthSlider = document.getElementById('borderWidthSlider');
+    const borderWidthValue = document.getElementById('borderWidthValue');
+    const borderColorPicker = document.getElementById('borderColorPicker');
+    const borderControls = document.getElementById('borderControls');
+    
+    const cutLinesCard = document.getElementById('cutLinesCard');
+    const enableCutLines = document.getElementById('enableCutLines');
+    const cutLineStyleSelect = document.getElementById('cutLineStyleSelect');
+    const cutLineColorPicker = document.getElementById('cutLineColorPicker');
+    const cutLinesControls = document.getElementById('cutLinesControls');
     
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.querySelector('.theme-icon');
@@ -205,6 +256,43 @@
         });
     }
 
+    // Crop Aspect Ratio Buttons
+    if (cropAspectButtons) {
+        cropAspectButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                cropAspectButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const ratioStr = btn.dataset.ratio;
+                const ratio = ratioStr === 'NaN' || ratioStr === 'free' ? NaN : parseFloat(ratioStr);
+                
+                if (cropper) {
+                    cropper.setAspectRatio(ratio);
+                }
+                
+                const w = parseFloat(btn.dataset.w);
+                const h = parseFloat(btn.dataset.h);
+                if (w && h) {
+                    PHOTO_WIDTH = mmToPixels(w);
+                    PHOTO_HEIGHT = mmToPixels(h);
+                    if (customWidth) customWidth.value = w;
+                    if (customHeight) customHeight.value = h;
+                    
+                    if (editorPhotoSize) {
+                        for (let opt of editorPhotoSize.options) {
+                            const preset = PHOTO_PRESETS[opt.value];
+                            if (preset && Math.abs(preset.width - w) < 0.1 && Math.abs(preset.height - h) < 0.1) {
+                                editorPhotoSize.value = opt.value;
+                                break;
+                            }
+                        }
+                    }
+                    updateSizeBadge(w, h);
+                }
+            });
+        });
+    }
+
     // Crop Tools
     document.getElementById('rotateLeft').addEventListener('click', () => {
         cropper.rotate(-90);
@@ -229,10 +317,6 @@
     });
 
     document.getElementById('applyCrop').addEventListener('click', () => {
-        // Reset to standard passport photo dimensions
-        PHOTO_WIDTH = 413;
-        PHOTO_HEIGHT = 531;
-        
         croppedCanvas = cropper.getCroppedCanvas({
             width: PHOTO_WIDTH,
             height: PHOTO_HEIGHT,
@@ -243,6 +327,7 @@
         showSection(previewArea);
         hideCard(cropToolsCard);
         showCard(adjustmentsCard);
+        showCard(borderCard);
         
         renderPreview();
     });
@@ -265,6 +350,7 @@
         showSection(previewArea);
         hideCard(cropToolsCard);
         showCard(adjustmentsCard);
+        showCard(borderCard);
         
         renderPreview();
     });
@@ -273,6 +359,8 @@
         showSection(cropArea);
         showCard(cropToolsCard);
         hideCard(adjustmentsCard);
+        hideCard(borderCard);
+        hideCard(cutLinesCard);
     });
 
     // Adjustments
@@ -407,6 +495,20 @@
             ctx.fillRect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
             ctx.globalAlpha = 1;
         }
+
+        // Draw black border around passport photo if enabled
+        if (borderSettings.enabled) {
+            ctx.save();
+            ctx.strokeStyle = borderSettings.color || '#000000';
+            ctx.lineWidth = borderSettings.width || 3;
+            ctx.strokeRect(
+                borderSettings.width / 2,
+                borderSettings.width / 2,
+                PHOTO_WIDTH - borderSettings.width,
+                PHOTO_HEIGHT - borderSettings.width
+            );
+            ctx.restore();
+        }
     }
 
     // Generate A4
@@ -414,6 +516,8 @@
         showSection(a4Area);
         hideCard(adjustmentsCard);
         showCard(sizeSelectionCard);
+        showCard(borderCard);
+        showCard(cutLinesCard);
         
         // Initialize photo count slider
         const maxPhotos = calculateMaxPhotos();
@@ -445,13 +549,13 @@
         ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
         
         const margin = 60;
-        const spacing = 30;
+        const spacing = getSpacing();
         
         const availableWidth = A4_WIDTH - (2 * margin);
         const availableHeight = A4_HEIGHT - (2 * margin);
         
-        const photosPerRow = Math.floor((availableWidth + spacing) / (PHOTO_WIDTH + spacing));
-        const photosPerCol = Math.floor((availableHeight + spacing) / (PHOTO_HEIGHT + spacing));
+        const photosPerRow = Math.max(1, Math.floor((availableWidth + spacing) / (PHOTO_WIDTH + spacing)));
+        const photosPerCol = Math.max(1, Math.floor((availableHeight + spacing) / (PHOTO_HEIGHT + spacing)));
         
         const maxPhotos = photosPerRow * photosPerCol;
         const sliderValue = parseInt(photoCountSlider?.value || maxPhotos);
@@ -468,115 +572,267 @@
                 count++;
             }
         }
+
+        // Draw Scissor Cutting Guide Lines if enabled
+        if (cutLineSettings.enabled && count > 0) {
+            const colsUsed = Math.min(count, photosPerRow);
+            const rowsUsed = Math.ceil(count / photosPerRow);
+            drawCuttingGuides(ctx, {
+                margin: margin,
+                spacing: spacing,
+                photoWidth: PHOTO_WIDTH,
+                photoHeight: PHOTO_HEIGHT,
+                colsUsed: colsUsed,
+                rowsUsed: rowsUsed,
+                style: cutLineSettings.style,
+                color: cutLineSettings.color || '#333333',
+                lineWidth: 2,
+                showScissors: true,
+                canvasWidth: A4_WIDTH,
+                canvasHeight: A4_HEIGHT
+            });
+        }
     }
 
-    // Photo Size Selection
-    const photoSizeRadios = document.querySelectorAll('input[name="photoSize"]');
-    const customSizeInputs = document.getElementById('customSizeInputs');
-    const customWidth = document.getElementById('customWidth');
-    const customHeight = document.getElementById('customHeight');
+    function drawCuttingGuides(targetCtx, options) {
+        const {
+            margin,
+            spacing,
+            photoWidth,
+            photoHeight,
+            colsUsed,
+            rowsUsed,
+            style = 'dashed',
+            color = '#333333',
+            lineWidth = 2,
+            showScissors = true,
+            canvasWidth = A4_WIDTH,
+            canvasHeight = A4_HEIGHT
+        } = options;
 
-    photoSizeRadios.forEach(radio => {
-        radio.addEventListener('change', (e) => {
+        if (!colsUsed || !rowsUsed || colsUsed <= 0 || rowsUsed <= 0) return;
+
+        targetCtx.save();
+        targetCtx.strokeStyle = color;
+        targetCtx.fillStyle = color;
+        targetCtx.lineWidth = lineWidth;
+
+        if (style === 'dashed') {
+            targetCtx.setLineDash([12, 12]);
+        } else if (style === 'dotted') {
+            targetCtx.setLineDash([4, 6]);
+        } else {
+            targetCtx.setLineDash([]);
+        }
+
+        const gridLeft = margin;
+        const gridRight = margin + colsUsed * photoWidth + (colsUsed - 1) * spacing;
+        const gridTop = margin;
+        const gridBottom = margin + rowsUsed * photoHeight + (rowsUsed - 1) * spacing;
+
+        const extension = 35;
+        const lineTop = Math.max(10, gridTop - extension);
+        const lineBottom = Math.min(canvasHeight - 10, gridBottom + extension);
+        const lineLeft = Math.max(10, gridLeft - extension);
+        const lineRight = Math.min(canvasWidth - 10, gridRight + extension);
+
+        // 1. Vertical Cut Lines
+        const verticalXPositions = [];
+        verticalXPositions.push(gridLeft - (spacing > 0 ? spacing / 2 : 0));
+        for (let c = 0; c < colsUsed - 1; c++) {
+            verticalXPositions.push(margin + (c + 1) * photoWidth + c * spacing + spacing / 2);
+        }
+        verticalXPositions.push(gridRight + (spacing > 0 ? spacing / 2 : 0));
+
+        verticalXPositions.forEach(x => {
+            targetCtx.beginPath();
+            targetCtx.moveTo(x, lineTop);
+            targetCtx.lineTo(x, lineBottom);
+            targetCtx.stroke();
+
+            if (showScissors && style === 'dashed') {
+                targetCtx.save();
+                targetCtx.setLineDash([]);
+                targetCtx.font = 'bold 24px Arial, sans-serif';
+                targetCtx.textAlign = 'center';
+                targetCtx.textBaseline = 'bottom';
+                targetCtx.fillText('✂', x, lineTop - 4);
+                targetCtx.restore();
+            }
+        });
+
+        // 2. Horizontal Cut Lines
+        const horizontalYPositions = [];
+        horizontalYPositions.push(gridTop - (spacing > 0 ? spacing / 2 : 0));
+        for (let r = 0; r < rowsUsed - 1; r++) {
+            horizontalYPositions.push(margin + (r + 1) * photoHeight + r * spacing + spacing / 2);
+        }
+        horizontalYPositions.push(gridBottom + (spacing > 0 ? spacing / 2 : 0));
+
+        horizontalYPositions.forEach(y => {
+            targetCtx.beginPath();
+            targetCtx.moveTo(lineLeft, y);
+            targetCtx.lineTo(lineRight, y);
+            targetCtx.stroke();
+
+            if (showScissors && style === 'dashed') {
+                targetCtx.save();
+                targetCtx.setLineDash([]);
+                targetCtx.font = 'bold 24px Arial, sans-serif';
+                targetCtx.textAlign = 'right';
+                targetCtx.textBaseline = 'middle';
+                targetCtx.fillText('✂', lineLeft - 6, y);
+                targetCtx.restore();
+            }
+        });
+
+        targetCtx.restore();
+    }
+
+    // Spacing helper
+    function getSpacing() {
+        return editorPhotoSpacingSelect ? parseInt(editorPhotoSpacingSelect.value) : 30;
+    }
+
+    // Update Size Information Badge
+    function updateSizeBadge(widthMm, heightMm) {
+        const widthInches = (widthMm / MM_TO_INCH).toFixed(2);
+        const heightInches = (heightMm / MM_TO_INCH).toFixed(2);
+        const widthPx = mmToPixels(widthMm);
+        const heightPx = mmToPixels(heightMm);
+        
+        const spacing = getSpacing();
+        const availableW = A4_WIDTH - (2 * 60);
+        const availableH = A4_HEIGHT - (2 * 60);
+        const perRow = Math.max(1, Math.floor((availableW + spacing) / (widthPx + spacing)));
+        const perCol = Math.max(1, Math.floor((availableH + spacing) / (heightPx + spacing)));
+        const capacity = perRow * perCol;
+        
+        const badgeDim = document.getElementById('badgeDimensions');
+        const badgePx = document.getElementById('badgePixels');
+        const badgeCap = document.getElementById('badgeCapacity');
+        
+        if (badgeDim) badgeDim.textContent = `${widthMm} × ${heightMm} mm (${widthInches} × ${heightInches} in)`;
+        if (badgePx) badgePx.textContent = `${widthPx} × ${heightPx} px @ 300 DPI`;
+        if (badgeCap) badgeCap.textContent = `Up to ${capacity} photos (${perRow} cols × ${perCol} rows)`;
+    }
+
+    // Photo Size Selection Handler
+    if (editorPhotoSize) {
+        editorPhotoSize.addEventListener('change', (e) => {
             const value = e.target.value;
             
             if (value === 'custom') {
-                customSizeInputs.style.display = 'block';
+                if (customSizeInputs) customSizeInputs.style.display = 'block';
                 updatePhotoSizeFromCustom();
             } else {
-                customSizeInputs.style.display = 'none';
+                if (customSizeInputs) customSizeInputs.style.display = 'none';
                 updatePhotoSizeFromPreset(value);
             }
             
-            // Live preview - update A4 layout immediately
             updateA4WithNewSize();
             updatePhotoCountSlider();
         });
-    });
+    }
 
-    customWidth.addEventListener('input', () => {
-        updatePhotoSizeFromCustom();
-        updateA4WithNewSize();
-        updatePhotoCountSlider();
-    });
+    if (editorPhotoSpacingSelect) {
+        editorPhotoSpacingSelect.addEventListener('change', () => {
+            const currentMmW = parseFloat(customWidth?.value) || 35;
+            const currentMmH = parseFloat(customHeight?.value) || 45;
+            updateSizeBadge(currentMmW, currentMmH);
+            generateA4Layout();
+            updatePhotoCountSlider();
+        });
+    }
+
+    if (customWidth) {
+        customWidth.addEventListener('input', () => {
+            updatePhotoSizeFromCustom();
+            updateA4WithNewSize();
+            updatePhotoCountSlider();
+        });
+    }
     
-    customHeight.addEventListener('input', () => {
-        updatePhotoSizeFromCustom();
-        updateA4WithNewSize();
-        updatePhotoCountSlider();
-    });
+    if (customHeight) {
+        customHeight.addEventListener('input', () => {
+            updatePhotoSizeFromCustom();
+            updateA4WithNewSize();
+            updatePhotoCountSlider();
+        });
+    }
 
     // Photo Count Slider
     const photoCountSlider = document.getElementById('photoCountSlider');
     const photoCountValue = document.getElementById('photoCountValue');
     let isAtMaximum = true; // Track if user wants maximum photos
 
-    photoCountSlider.addEventListener('input', (e) => {
-        const value = parseInt(e.target.value);
-        const maxPhotos = calculateMaxPhotos();
-        
-        // Ensure value is at least 1
-        if (value < 1) {
-            photoCountSlider.value = 1;
-            photoCountValue.textContent = '1';
-            isAtMaximum = false;
-        } else if (value >= maxPhotos) {
-            photoCountValue.textContent = 'Maximum';
-            isAtMaximum = true;
-        } else {
-            photoCountValue.textContent = value;
-            isAtMaximum = false;
-        }
-        
-        generateA4Layout();
-    });
+    if (photoCountSlider) {
+        photoCountSlider.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value);
+            const maxPhotos = calculateMaxPhotos();
+            
+            // Ensure value is at least 1
+            if (value < 1) {
+                photoCountSlider.value = 1;
+                photoCountValue.textContent = '1';
+                isAtMaximum = false;
+            } else if (value >= maxPhotos) {
+                photoCountValue.textContent = 'Maximum';
+                isAtMaximum = true;
+            } else {
+                photoCountValue.textContent = value;
+                isAtMaximum = false;
+            }
+            
+            generateA4Layout();
+        });
+    }
 
     function calculateMaxPhotos() {
         const margin = 60;
-        const spacing = 30;
+        const spacing = getSpacing();
         const availableWidth = A4_WIDTH - (2 * margin);
         const availableHeight = A4_HEIGHT - (2 * margin);
-        const photosPerRow = Math.floor((availableWidth + spacing) / (PHOTO_WIDTH + spacing));
-        const photosPerCol = Math.floor((availableHeight + spacing) / (PHOTO_HEIGHT + spacing));
+        const photosPerRow = Math.max(1, Math.floor((availableWidth + spacing) / (PHOTO_WIDTH + spacing)));
+        const photosPerCol = Math.max(1, Math.floor((availableHeight + spacing) / (PHOTO_HEIGHT + spacing)));
         return photosPerRow * photosPerCol;
     }
 
     function updatePhotoCountSlider() {
+        if (!photoCountSlider) return;
         const maxPhotos = calculateMaxPhotos();
         photoCountSlider.max = maxPhotos;
         
         // If user wants maximum or current value exceeds new max, set to new maximum
         if (isAtMaximum || parseInt(photoCountSlider.value) > maxPhotos) {
             photoCountSlider.value = maxPhotos;
-            photoCountValue.textContent = 'Maximum';
+            if (photoCountValue) photoCountValue.textContent = 'Maximum';
             isAtMaximum = true;
         }
     }
 
     function updatePhotoSizeFromPreset(preset) {
-        const sizes = {
-            'india': { width: 35, height: 45 },
-            'usa': { width: 51, height: 51 },
-            'canada': { width: 50, height: 70 },
-            'schengen': { width: 35, height: 45 },
-            'china': { width: 33, height: 48 }
-        };
-        
-        const size = sizes[preset];
+        const size = PHOTO_PRESETS[preset];
         if (size) {
             PHOTO_WIDTH = mmToPixels(size.width);
             PHOTO_HEIGHT = mmToPixels(size.height);
+            if (customWidth) customWidth.value = size.width;
+            if (customHeight) customHeight.value = size.height;
+            updateSizeBadge(size.width, size.height);
         }
     }
 
     function updatePhotoSizeFromCustom() {
-        const width = parseInt(customWidth.value) || 35;
-        const height = parseInt(customHeight.value) || 45;
+        const width = parseFloat(customWidth?.value) || 35;
+        const height = parseFloat(customHeight?.value) || 45;
         PHOTO_WIDTH = mmToPixels(width);
         PHOTO_HEIGHT = mmToPixels(height);
+        updateSizeBadge(width, height);
     }
 
     function updateA4WithNewSize() {
+        if (!croppedCanvas) return;
+        
         // Resize the preview canvas to new dimensions
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = PHOTO_WIDTH;
@@ -605,6 +861,20 @@
             tempCtx.fillRect(0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
             tempCtx.globalAlpha = 1;
         }
+
+        // Draw black border around passport photo if enabled
+        if (borderSettings.enabled) {
+            tempCtx.save();
+            tempCtx.strokeStyle = borderSettings.color || '#000000';
+            tempCtx.lineWidth = borderSettings.width || 3;
+            tempCtx.strokeRect(
+                borderSettings.width / 2,
+                borderSettings.width / 2,
+                PHOTO_WIDTH - borderSettings.width,
+                PHOTO_HEIGHT - borderSettings.width
+            );
+            tempCtx.restore();
+        }
         
         // Update preview canvas
         previewCanvas.width = PHOTO_WIDTH;
@@ -619,19 +889,172 @@
         updatePhotoCountSlider();
     }
 
+    // Initialize size badge
+    updateSizeBadge(35, 45);
+
+    // Border Event Listeners
+    if (enableBorder) {
+        enableBorder.addEventListener('change', (e) => {
+            borderSettings.enabled = e.target.checked;
+            if (borderControls) {
+                borderControls.style.display = borderSettings.enabled ? 'block' : 'none';
+            }
+            if (croppedCanvas) {
+                renderPreview();
+                if (a4Area && a4Area.style.display !== 'none') {
+                    generateA4Layout();
+                }
+            }
+        });
+    }
+
+    if (borderWidthSlider) {
+        borderWidthSlider.addEventListener('input', (e) => {
+            borderSettings.width = parseInt(e.target.value) || 3;
+            if (borderWidthValue) {
+                borderWidthValue.textContent = `${borderSettings.width}px`;
+            }
+            if (croppedCanvas) {
+                renderPreview();
+                if (a4Area && a4Area.style.display !== 'none') {
+                    generateA4Layout();
+                }
+            }
+        });
+    }
+
+    if (borderColorPicker) {
+        borderColorPicker.addEventListener('input', (e) => {
+            borderSettings.color = e.target.value || '#000000';
+            if (croppedCanvas) {
+                renderPreview();
+                if (a4Area && a4Area.style.display !== 'none') {
+                    generateA4Layout();
+                }
+            }
+        });
+    }
+
+    // Cut Line Event Listeners
+    if (enableCutLines) {
+        enableCutLines.addEventListener('change', (e) => {
+            cutLineSettings.enabled = e.target.checked;
+            if (cutLinesControls) {
+                cutLinesControls.style.display = cutLineSettings.enabled ? 'block' : 'none';
+            }
+            if (a4Area && a4Area.style.display !== 'none') {
+                generateA4Layout();
+            }
+        });
+    }
+
+    if (cutLineStyleSelect) {
+        cutLineStyleSelect.addEventListener('change', (e) => {
+            cutLineSettings.style = e.target.value;
+            if (a4Area && a4Area.style.display !== 'none') {
+                generateA4Layout();
+            }
+        });
+    }
+
+    if (cutLineColorPicker) {
+        cutLineColorPicker.addEventListener('input', (e) => {
+            cutLineSettings.color = e.target.value || '#333333';
+            if (a4Area && a4Area.style.display !== 'none') {
+                generateA4Layout();
+            }
+        });
+    }
+
+    // Professional High-Resolution Print Function
+    function printCanvas(targetCanvas) {
+        if (!targetCanvas) {
+            alert('Please generate the A4 sheet first before printing!');
+            return;
+        }
+
+        try {
+            const dataUrl = targetCanvas.toDataURL('image/jpeg', 1.0);
+            
+            let printIframe = document.getElementById('printIframe');
+            if (!printIframe) {
+                printIframe = document.createElement('iframe');
+                printIframe.id = 'printIframe';
+                printIframe.style.position = 'fixed';
+                printIframe.style.right = '0';
+                printIframe.style.bottom = '0';
+                printIframe.style.width = '0';
+                printIframe.style.height = '0';
+                printIframe.style.border = '0';
+                document.body.appendChild(printIframe);
+            }
+            
+            const printDoc = printIframe.contentDocument || printIframe.contentWindow.document;
+            printDoc.open();
+            printDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Print Passport Photos</title>
+                    <style>
+                        @page {
+                            size: A4 portrait;
+                            margin: 0;
+                        }
+                        * {
+                            box-sizing: border-box;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        html, body {
+                            width: 100%;
+                            height: 100%;
+                            background: #ffffff;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        }
+                        img {
+                            width: 100%;
+                            max-width: 210mm;
+                            height: auto;
+                            max-height: 297mm;
+                            display: block;
+                            margin: 0 auto;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <img id="printImg" src="${dataUrl}" alt="Passport Photos" />
+                </body>
+                </html>
+            `);
+            printDoc.close();
+            
+            const img = printDoc.getElementById('printImg');
+            if (img) {
+                img.onload = () => {
+                    setTimeout(() => {
+                        printIframe.contentWindow.focus();
+                        printIframe.contentWindow.print();
+                    }, 250);
+                };
+            }
+        } catch (err) {
+            console.warn('Iframe print fallback to window.print:', err);
+            window.print();
+        }
+    }
+
     // Print
-    document.getElementById('printA4').addEventListener('click', () => {
-        // Clear page title temporarily for cleaner print
-        const originalTitle = document.title;
-        document.title = '';
-        
-        window.print();
-        
-        // Restore title after print dialog
-        setTimeout(() => {
-            document.title = originalTitle;
-        }, 100);
-    });
+    const printA4Btn = document.getElementById('printA4');
+    if (printA4Btn) {
+        printA4Btn.addEventListener('click', () => {
+            printCanvas(a4Canvas);
+        });
+    }
 
     // Download PDF
     document.getElementById('downloadPDF').addEventListener('click', () => {

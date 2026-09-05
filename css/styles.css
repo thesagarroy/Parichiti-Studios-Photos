@@ -1534,3 +1534,243 @@ body.dark-mode .footer-link:hover {
         font-size: 14px;
     }
 }
+
+/* Border Settings Styles */
+.border-card, .border-options-group {
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 15px;
+    transition: all 0.3s ease;
+}
+
+.border-options-group:hover, .border-card:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.border-sub-controls {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.border-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.color-picker-input {
+    width: 44px;
+    height: 36px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 2px;
+    background: var(--input-bg);
+    transition: all 0.3s ease;
+}
+
+.color-picker-input:hover {
+    border-color: var(--accent-color);
+    transform: scale(1.05);
+}
+
+/* Size Info Badge Styles */
+.size-info-badge {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13.5px;
+    transition: all 0.3s ease;
+}
+
+body.dark-mode .size-info-badge {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+.size-info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.size-info-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.size-info-item strong {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: right;
+}
+
+/* Crop Aspect Ratio Buttons in Editor */
+.crop-aspect-group {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.crop-aspect-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.aspect-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.aspect-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.aspect-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateY(-1px);
+}
+
+.aspect-btn.active {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+/* Select Optgroup Styling */
+select optgroup {
+    font-weight: 700;
+    color: var(--accent-color);
+    background: var(--card-bg);
+    padding: 6px 0;
+}
+
+select option {
+    font-weight: normal;
+    color: var(--text-primary);
+    background: var(--card-bg);
+    padding: 6px 10px;
+}
+
+/* ==========================================================================
+   Print Media Styles (100% Clean A4 Page Output)
+   ========================================================================== */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 0mm;
+    }
+    
+    html, body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
+    .theme-toggle,
+    .app-loader,
+    .install-prompt,
+    .app-header,
+    .editor-nav,
+    .upload-section,
+    .editor-controls,
+    .crop-area,
+    .crop-tools-horizontal,
+    .preview-area,
+    .action-buttons,
+    .app-footer,
+    h1, h2, h3, h4, p, label, select, input, button {
+        display: none !important;
+    }
+    
+    .container,
+    .editor-container,
+    .editor-grid,
+    .editor-preview,
+    .preview-section,
+    .a4-area,
+    .a4-container {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        background: #ffffff !important;
+    }
+    
+    canvas#photoCanvas,
+    canvas#a4Canvas {
+        display: block !important;
+        width: 100% !important;
+        max-width: 210mm !important;
+        height: auto !important;
+        max-height: 297mm !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
+
+

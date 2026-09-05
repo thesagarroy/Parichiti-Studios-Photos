@@ -254,20 +254,110 @@
             <label for="photoUpload" class="upload-label">Upload Photo:</label>
             <input type="file" id="photoUpload" accept="image/*" />
             
-            <label for="photoSize">Photo Size:</label>
+            <label for="photoSize">Photo Size (ছবির সাইজ নির্বাচন করুন):</label>
             <select id="photoSize">
-                <option value="35x45">India/UK (35×45 mm)</option>
-                <option value="51x51">USA (51×51 mm)</option>
-                <option value="50x70">Canada (50×70 mm)</option>
-                <option value="custom">Custom Size</option>
+                <optgroup label="🛂 Official Passport & Visa Sizes">
+                    <option value="35x45" selected>India / UK / Schengen / Europe (35×45 mm)</option>
+                    <option value="51x51">USA / India OCI / 2×2 Inch (51×51 mm / 2×2 in)</option>
+                    <option value="50x70">Canada Passport / PR (50×70 mm)</option>
+                    <option value="40x50">Bangladesh Passport / Visa (40×50 mm)</option>
+                    <option value="35x50">Malaysia / Singapore Visa (35×50 mm)</option>
+                    <option value="33x48">China Passport / Visa (33×48 mm)</option>
+                    <option value="40x60">UAE / Dubai / Saudi Arabia Visa (40×60 mm)</option>
+                    <option value="35x45_au">Australia / New Zealand Passport (35×45 mm)</option>
+                    <option value="35x45_jp">Japan / South Korea Visa (35×45 mm)</option>
+                    <option value="35x45_sg">Singapore Passport (35×45 mm)</option>
+                </optgroup>
+                <optgroup label="🪪 ID, Card, Exam & Stamp Sizes">
+                    <option value="25x35">India PAN Card / Govt Exam (25×35 mm)</option>
+                    <option value="25x30">Stamp Size - Standard (25×30 mm)</option>
+                    <option value="30.5x38">Stamp Size - Classic (30.5×38 mm / 1.2×1.5 in)</option>
+                    <option value="20x25">Stamp Size - Mini (20×25 mm)</option>
+                    <option value="38x51">1.5 × 2 Inch Photo (38.1×50.8 mm)</option>
+                </optgroup>
+                <optgroup label="🖼️ Wallet & Print Sizes">
+                    <option value="63.5x89">2R Wallet Size (63.5×89 mm / 2.5×3.5 in)</option>
+                    <option value="89x127">3R Card Photo (89×127 mm / 3.5×5 in)</option>
+                    <option value="101.6x152.4">4R Print Size (101.6×152.4 mm / 4×6 in)</option>
+                </optgroup>
+                <optgroup label="⚙️ Custom Dimensions">
+                    <option value="custom">Custom Size (Custom mm)</option>
+                </optgroup>
             </select>
+
+            <!-- Size Information Badge -->
+            <div id="sizeInfoBadge" class="size-info-badge">
+                <div class="size-info-item">
+                    <span class="size-info-label">📏 Dimensions:</span>
+                    <strong id="badgeDimensions">35 × 45 mm (1.38 × 1.77 in)</strong>
+                </div>
+                <div class="size-info-item">
+                    <span class="size-info-label">🎯 Resolution:</span>
+                    <strong id="badgePixels">413 × 531 px @ 300 DPI</strong>
+                </div>
+                <div class="size-info-item">
+                    <span class="size-info-label">📑 A4 Capacity:</span>
+                    <strong id="badgeCapacity">Up to 32 photos / sheet</strong>
+                </div>
+            </div>
             
-            <div id="customSizeInputs" style="display: none;">
+            <div id="customSizeInputs" style="display: none; margin-top: 15px;">
                 <label for="customWidth">Width (mm):</label>
-                <input type="number" id="customWidth" min="10" max="100" value="35" />
+                <input type="number" id="customWidth" min="10" max="200" step="any" value="35" />
                 
                 <label for="customHeight">Height (mm):</label>
-                <input type="number" id="customHeight" min="10" max="150" value="45" />
+                <input type="number" id="customHeight" min="10" max="250" step="any" value="45" />
+            </div>
+
+            <!-- Photo Spacing Option -->
+            <div class="border-options-group">
+                <div class="border-row">
+                    <label for="photoSpacingSelect" style="margin-bottom: 0; font-size: 14px; font-weight: 600;">
+                        <span>📐 Photo Spacing (ছবির ফাঁকা):</span>
+                    </label>
+                    <select id="photoSpacingSelect" style="width: auto; padding: 8px 14px; font-size: 14px;">
+                        <option value="15">Compact / 15px (~1.3mm)</option>
+                        <option value="30" selected>Standard / 30px (~2.5mm)</option>
+                        <option value="50">Wide / 50px (~4.2mm)</option>
+                        <option value="0">Zero Gap / 0px (একসাথে)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Border Options -->
+            <div class="border-options-group">
+                <label class="checkbox-label" for="enableBorder">
+                    <input type="checkbox" id="enableBorder" checked />
+                    <span>🔲 Black Border (কালো বর্ডার)</span>
+                </label>
+                <div id="borderSubControls" class="border-sub-controls">
+                    <div class="border-row">
+                        <label for="borderWidthSelect" style="margin-bottom: 0; font-size: 14px;">Border Thickness:</label>
+                        <select id="borderWidthSelect" style="width: auto; padding: 8px 14px; font-size: 14px;">
+                            <option value="2">Thin (2px)</option>
+                            <option value="3" selected>Medium (3px)</option>
+                            <option value="5">Thick (5px)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scissor Cutting Guide Lines Options -->
+            <div class="border-options-group">
+                <label class="checkbox-label" for="enableCutLines">
+                    <input type="checkbox" id="enableCutLines" checked />
+                    <span>✂️ Scissor Cut Lines (কাঁচি দিয়ে কাটার দাগ)</span>
+                </label>
+                <div id="cutLinesSubControls" class="border-sub-controls">
+                    <div class="border-row">
+                        <label for="cutLineStyleSelect" style="margin-bottom: 0; font-size: 14px;">Line Style:</label>
+                        <select id="cutLineStyleSelect" style="width: auto; padding: 8px 14px; font-size: 14px;">
+                            <option value="dashed" selected>Dashed with ✂️ (ড্যাশ দাগ)</option>
+                            <option value="solid">Solid Line (সোজা দাগ)</option>
+                            <option value="dotted">Dotted Line (ডট দাগ)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             
         </div>

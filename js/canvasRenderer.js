@@ -15,8 +15,19 @@ function drawPassportPhoto(canvas, image, numberOfPhotos) {
         const x = (i % photosPerRow) * (canvas.width / photosPerRow) + margin;
         const y = Math.floor(i / photosPerRow) * (canvas.height / photosPerColumn) + margin;
 
+        const drawW = (canvas.width / photosPerRow) - margin;
+        const drawH = (canvas.height / photosPerColumn) - margin;
+
         // Draw the image on the canvas
-        ctx.drawImage(image, x, y, (canvas.width / photosPerRow) - margin, (canvas.height / photosPerColumn) - margin);
+        ctx.drawImage(image, x, y, drawW, drawH);
+
+        // Draw black border around passport photo
+        const borderWidth = 2;
+        ctx.save();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = borderWidth;
+        ctx.strokeRect(x + borderWidth / 2, y + borderWidth / 2, drawW - borderWidth, drawH - borderWidth);
+        ctx.restore();
     }
 }
 

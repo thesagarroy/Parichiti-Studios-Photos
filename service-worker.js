@@ -5,7 +5,7 @@
  * for the passport photo generator PWA.
  */
 
-const CACHE_NAME = 'passport-photo-v2';
+const CACHE_NAME = 'passport-photo-v3';
 const urlsToCache = [
   './',
   './index.html',
