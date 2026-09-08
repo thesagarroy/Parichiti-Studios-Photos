@@ -1,13 +1,13 @@
 {
-  "name": "Free Passport Photo Generator",
-  "short_name": "PassportPic",
-  "version": "2.0.0",
-  "description": "Create professional passport photos FREE! Works 100% offline, no sign-up. Support for USA, India, UK, Canada & 50+ countries.",
+  "name": "Parichiti Studios - Indian Passport Photo Generator",
+  "short_name": "ParichitiPhotos",
+  "version": "2.1.0",
+  "description": "Create professional Indian passport, PAN card, and stamp size photos for FREE! 100% offline by Parichiti Digital Services.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
+  "background_color": "#090d16",
+  "theme_color": "#6366f1",
   "orientation": "portrait",
   "icons": [
     {

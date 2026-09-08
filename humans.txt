@@ -3,10 +3,10 @@
 
 # TEAM
 
-    Developer & Designer: Rizwan Soaib
-    Contact: rizwansoaib [at] github.com
-    Twitter: @rizwansoaib
-    GitHub: https://github.com/rizwansoaib
+    Developer & Designer: Sagar Roy
+    Company: Parichiti Digital Services
+    Contact: thesagarroy [at] github.com
+    GitHub: https://github.com/thesagarroy
     Location: India
 
 # THANKS
@@ -22,17 +22,19 @@
     Components: Vanilla JavaScript, Canvas API
     Libraries: Cropper.js 1.6.1, jsPDF 2.5.1
     PWA: Service Worker, Web App Manifest
-    Fonts: System Fonts (-apple-system, BlinkMacSystemFont, Segoe UI)
+    Fonts: Google Fonts (Outfit, Plus Jakarta Sans)
     Tools: Git, VS Code
     Hosting: GitHub Pages
 
 # PROJECT INFO
 
-    Name: Passport Photo Generator
-    Version: 2.0.0
+    Name: Parichiti Studios - Passport Photo Suite
+    Company: Parichiti Digital Services
+    Developer: Sagar Roy
+    Version: 2.1.0
     Type: Progressive Web App (PWA)
     License: MIT
-    Year: 2025
+    Year: 2026
     Status: Active Development
     
 # FEATURES
@@ -40,11 +42,11 @@
     - 100% Free Forever
     - Works Completely Offline
     - No Sign-up Required
-    - Privacy-First Approach
-    - 300 DPI Professional Quality
-    - Support for 50+ Countries
-    - Dark Mode Support
-    - Mobile Responsive
+    - Privacy-First Client-Side Processing
+    - 300 DPI Professional Print Quality
+    - Support for 50+ Countries & Visa Formats
+    - Luxury Dark & Light Mode
+    - Mobile & Desktop Responsive
     - Installable PWA
     
 # PHILOSOPHY
@@ -54,4 +56,4 @@
     your device, always. No tracking, no data 
     collection, no hidden costs.
 
-    Made with ❤️ in India for the world.
+    Made with ❤️ by Sagar Roy (Parichiti Digital Services).

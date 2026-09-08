@@ -65,31 +65,28 @@
     const DPI = 300;
     const MM_TO_INCH = 25.4;
 
-    // Standard Photo Size Presets (dimensions in mm)
+    // Standard Photo Size Presets for India (dimensions in mm)
     const PHOTO_PRESETS = {
-        '35x45': { width: 35, height: 45, label: 'India / UK / Schengen (35×45 mm)' },
-        '51x51': { width: 51, height: 51, label: 'USA / India OCI 2×2" (51×51 mm)' },
-        '50x70': { width: 50, height: 70, label: 'Canada Passport / PR (50×70 mm)' },
-        '40x50': { width: 40, height: 50, label: 'Bangladesh Passport / Visa (40×50 mm)' },
-        '35x50': { width: 35, height: 50, label: 'Malaysia / Singapore Visa (35×50 mm)' },
-        '33x48': { width: 33, height: 48, label: 'China Passport / Visa (33×48 mm)' },
-        '40x60': { width: 40, height: 60, label: 'UAE / Dubai / Saudi Visa (40×60 mm)' },
-        '35x45_au': { width: 35, height: 45, label: 'Australia / New Zealand (35×45 mm)' },
-        '35x45_jp': { width: 35, height: 45, label: 'Japan / South Korea (35×45 mm)' },
-        '35x45_sg': { width: 35, height: 45, label: 'Singapore Passport (35×45 mm)' },
-        '25x35': { width: 25, height: 35, label: 'India PAN Card / Exam (25×35 mm)' },
-        '25x30': { width: 25, height: 30, label: 'Stamp Size - Standard (25×30 mm)' },
-        '30.5x38': { width: 30.5, height: 38, label: 'Stamp Size - Classic (30.5×38 mm)' },
-        '20x25': { width: 20, height: 25, label: 'Stamp Size - Mini (20×25 mm)' },
-        '38x51': { width: 38.1, height: 50.8, label: '1.5 × 2 Inch (38.1×50.8 mm)' },
-        '63.5x89': { width: 63.5, height: 88.9, label: '2R Wallet Size (63.5×89 mm)' },
-        '89x127': { width: 88.9, height: 127, label: '3R Card Photo (89×127 mm)' },
-        '101.6x152.4': { width: 101.6, height: 152.4, label: '4R Print Size (101.6×152.4 mm)' }
+        '35x45': { width: 35, height: 45, label: 'Indian Passport / Govt Exam (35×45 mm / 1.38×1.77 in)' },
+        '25x35': { width: 25, height: 35, label: 'PAN Card - NSDL / UTIITSL (25×35 mm / 0.98×1.38 in)' },
+        '30.5x38': { width: 30.5, height: 38, label: 'Classic Studio Stamp (30.5×38 mm / 1.2×1.5 in)' },
+        '25x30': { width: 25, height: 30, label: 'Stamp Size - Standard (25×30 mm / 0.98×1.18 in)' },
+        '20x25': { width: 20, height: 25, label: 'Stamp Size - Mini (20×25 mm / 0.79×0.98 in)' },
+        '51x51': { width: 51, height: 51, label: 'USA Visa / OCI (51×51 mm / 2×2 in)' },
+        '101.6x152.4': { width: 101.6, height: 152.4, label: 'NEET Postcard / 4R (102×152 mm / 4×6 in)' }
     };
 
     // Dynamic photo dimensions (will be updated based on selection)
     let PHOTO_WIDTH = mmToPixels(35);   // Default 35mm at 300 DPI
     let PHOTO_HEIGHT = mmToPixels(45);  // Default 45mm at 300 DPI
+    let photoBgColor = '#FFFFFF';       // Default studio photo background color (White)
+
+    // Photo Framing & Size Adjustment State
+    let photoFitMode = 'contain';       // 'contain' (fit full) or 'cover' (fill & center)
+    let photoScale = 1.0;               // 0.6 to 1.6 scale multiplier
+    let photoOffsetY = 0;               // vertical offset in percentage (-30% to +30%)
+    let rawOriginalImage = null;        // original uploaded image for reset
+    let bgTolerance = 35;               // background eraser sensitivity
 
     let uploadedImages = []; // Array to store multiple images
 
@@ -100,6 +97,8 @@
     const customWidth = document.getElementById('customWidth');
     const customHeight = document.getElementById('customHeight');
     const photoSpacingSelect = document.getElementById('photoSpacingSelect');
+    const photoBgColorPicker = document.getElementById('photoBgColorPicker');
+    const bgHexDisplay = document.getElementById('bgHexDisplay');
     const enableBorder = document.getElementById('enableBorder');
     const borderWidthSelect = document.getElementById('borderWidthSelect');
     const borderSubControls = document.getElementById('borderSubControls');
@@ -112,6 +111,24 @@
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.querySelector('.theme-icon');
     const printBtn = document.getElementById('printBtn');
+
+    // Photo Framing & Background Remover DOM elements
+    const photoAdjustCard = document.getElementById('photoAdjustCard');
+    const fitModeRadios = document.querySelectorAll('input[name="photoFitMode"]');
+    const photoScaleSlider = document.getElementById('photoScaleSlider');
+    const photoScaleVal = document.getElementById('photoScaleVal');
+    const photoOffsetSlider = document.getElementById('photoOffsetSlider');
+    const photoOffsetVal = document.getElementById('photoOffsetVal');
+    const autoRemoveBgBtn = document.getElementById('autoRemoveBgBtn');
+    const resetBgBtn = document.getElementById('resetBgBtn');
+    const bgToleranceBox = document.getElementById('bgToleranceBox');
+    const bgToleranceSlider = document.getElementById('bgToleranceSlider');
+    const bgToleranceVal = document.getElementById('bgToleranceVal');
+
+    // Stage Preview Size & Empty State DOM elements
+    const canvasEmptyState = document.getElementById('canvasEmptyState');
+    const paperStage = document.getElementById('paperStage');
+    const previewSizeBtns = document.querySelectorAll('#previewSizeToggles .preview-size-btn');
 
     // Set canvas dimensions
     canvas.width = A4_WIDTH;
@@ -130,6 +147,369 @@
         themeIcon.textContent = isDark ? '☀️' : '🌙';
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
     });
+
+    // Preview Size Toggles (Fit View / Big View / Full Width)
+    if (previewSizeBtns && paperStage) {
+        previewSizeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                previewSizeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const size = btn.getAttribute('data-size');
+                paperStage.classList.remove('view-fit', 'view-big', 'view-full');
+                if (size === 'fit') {
+                    paperStage.classList.add('view-fit');
+                } else if (size === 'full') {
+                    paperStage.classList.add('view-full');
+                } else {
+                    paperStage.classList.add('view-big');
+                }
+            });
+        });
+    }
+
+    // Background Color Management
+    function setPhotoBgColor(color) {
+        photoBgColor = color;
+        if (photoBgColorPicker) photoBgColorPicker.value = color;
+        if (bgHexDisplay) bgHexDisplay.textContent = color.toUpperCase();
+        
+        document.querySelectorAll('.bg-preset-btn').forEach(btn => {
+            const btnColor = btn.getAttribute('data-color');
+            if (btnColor && btnColor.toLowerCase() === color.toLowerCase()) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        if (uploadedImages.length > 0) {
+            renderPreview();
+        }
+    }
+
+    if (photoBgColorPicker) {
+        photoBgColorPicker.addEventListener('input', (e) => {
+            setPhotoBgColor(e.target.value);
+        });
+    }
+
+    document.querySelectorAll('.bg-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const color = btn.getAttribute('data-color');
+            if (color) setPhotoBgColor(color);
+        });
+    });
+
+    // Photo Framing & Size Adjustment Listeners
+    if (fitModeRadios) {
+        fitModeRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                photoFitMode = e.target.value;
+                if (uploadedImages.length > 0) renderPreview();
+            });
+        });
+    }
+
+    if (photoScaleSlider) {
+        photoScaleSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            photoScale = val / 100;
+            if (photoScaleVal) photoScaleVal.textContent = `${val}%`;
+            if (uploadedImages.length > 0) renderPreview();
+        });
+    }
+
+    if (photoOffsetSlider) {
+        photoOffsetSlider.addEventListener('input', (e) => {
+            photoOffsetY = parseInt(e.target.value);
+            if (photoOffsetVal) {
+                if (photoOffsetY === 0) photoOffsetVal.textContent = '0%';
+                else if (photoOffsetY > 0) photoOffsetVal.textContent = `+${photoOffsetY}% (Down)`;
+                else photoOffsetVal.textContent = `${photoOffsetY}% (Up)`;
+            }
+            if (uploadedImages.length > 0) renderPreview();
+        });
+    }
+
+    // ==========================================================================
+    // Neural AI Background Removal (Google MediaPipe Selfie Segmentation)
+    // ==========================================================================
+    let selfieSegmenter = null;
+    let cachedAiMaskCanvas = null;
+
+    function getAiSegmenter() {
+        if (selfieSegmenter) return Promise.resolve(selfieSegmenter);
+        if (typeof SelfieSegmentation === 'undefined') {
+            return Promise.reject(new Error('MediaPipe SelfieSegmentation library not loaded'));
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                const segmenter = new SelfieSegmentation({
+                    locateFile: (file) => {
+                        if (window.location.protocol === 'file:') {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+                        }
+                        return `./lib/mediapipe/${file}`;
+                    }
+                });
+
+                segmenter.setOptions({
+                    modelSelection: 1, // 1 = High-accuracy model for portraits/selfies
+                });
+
+                selfieSegmenter = segmenter;
+                resolve(segmenter);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    // Runs neural network and returns mask as an offscreen canvas
+    function extractAiPersonMask(sourceElement) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const segmenter = await getAiSegmenter();
+                let hasReturned = false;
+
+                const timeoutId = setTimeout(() => {
+                    if (!hasReturned) {
+                        hasReturned = true;
+                        reject(new Error('AI segmentation timed out'));
+                    }
+                }, 15000);
+
+                segmenter.onResults((results) => {
+                    if (hasReturned) return;
+                    hasReturned = true;
+                    clearTimeout(timeoutId);
+
+                    if (results && results.segmentationMask) {
+                        const maskCanvas = document.createElement('canvas');
+                        maskCanvas.width = sourceElement.naturalWidth || sourceElement.width || 800;
+                        maskCanvas.height = sourceElement.naturalHeight || sourceElement.height || 800;
+                        const mCtx = maskCanvas.getContext('2d');
+                        mCtx.drawImage(results.segmentationMask, 0, 0, maskCanvas.width, maskCanvas.height);
+                        resolve(maskCanvas);
+                    } else {
+                        reject(new Error('Invalid mask received from AI model'));
+                    }
+                });
+
+                await segmenter.send({ image: sourceElement });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    // Applies AI mask to source image with soft anti-aliased alpha feathering
+    function applyAiMaskToImage(sourceImg, maskCanvas, toleranceVal = 35) {
+        const w = sourceImg.naturalWidth || sourceImg.width;
+        const h = sourceImg.naturalHeight || sourceImg.height;
+
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = w;
+        outCanvas.height = h;
+        const outCtx = outCanvas.getContext('2d');
+
+        // Draw original photo
+        outCtx.drawImage(sourceImg, 0, 0, w, h);
+        const imgData = outCtx.getImageData(0, 0, w, h);
+        const pixels = imgData.data;
+
+        // Get mask pixels
+        const mCtx = maskCanvas.getContext('2d');
+        const maskData = mCtx.getImageData(0, 0, w, h).data;
+
+        // Map tolerance (10 to 80) to mask threshold (0 to 255)
+        const cutoff = (toleranceVal / 100) * 255;
+        const feather = 16; // soft alpha feathering for natural hair outlines
+        const minVal = Math.max(0, cutoff - feather);
+        const maxVal = Math.min(255, cutoff + feather);
+        const range = maxVal - minVal || 1;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            const conf = maskData[i]; // red channel of mask contains confidence
+            if (conf <= minVal) {
+                pixels[i + 3] = 0; // 100% transparent backdrop
+            } else if (conf < maxVal) {
+                // Smooth feathered anti-aliasing on borders
+                const alphaFactor = (conf - minVal) / range;
+                pixels[i + 3] = Math.round(pixels[i + 3] * alphaFactor);
+            }
+            // else keep 100% opaque foreground person
+        }
+
+        outCtx.putImageData(imgData, 0, 0);
+        return outCanvas;
+    }
+
+    // Fallback Client-Side Background Eraser
+    function processBackgroundRemovalFallback(sourceImg, tolerance = 35) {
+        const w = sourceImg.naturalWidth || sourceImg.width;
+        const h = sourceImg.naturalHeight || sourceImg.height;
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(sourceImg, 0, 0);
+
+        const imgData = tempCtx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+
+        // Sample background from corners and top margin
+        const samplePoints = [
+            [2, 2], [w - 3, 2],
+            [Math.floor(w * 0.25), 2], [Math.floor(w * 0.5), 2], [Math.floor(w * 0.75), 2],
+            [2, Math.floor(h * 0.25)], [w - 3, Math.floor(h * 0.25)]
+        ];
+
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (const [sx, sy] of samplePoints) {
+            if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+                const i = (sy * w + sx) * 4;
+                rSum += data[i];
+                gSum += data[i + 1];
+                bSum += data[i + 2];
+                count++;
+            }
+        }
+
+        const bgR = rSum / (count || 1);
+        const bgG = gSum / (count || 1);
+        const bgB = bSum / (count || 1);
+
+        const tolSq = tolerance * tolerance;
+        const featherStart = tolerance * 0.65;
+        const featherStartSq = featherStart * featherStart;
+
+        const visited = new Uint8Array(w * h);
+        const queue = [];
+
+        // Start flood-fill from top border and side borders
+        for (let x = 0; x < w; x++) {
+            queue.push(x, 0);
+            visited[x] = 1;
+        }
+        const maxH = Math.floor(h * 0.9);
+        for (let y = 1; y < maxH; y++) {
+            queue.push(0, y);
+            visited[y * w] = 1;
+            queue.push(w - 1, y);
+            visited[y * w + (w - 1)] = 1;
+        }
+
+        let head = 0;
+        while (head < queue.length) {
+            const cx = queue[head++];
+            const cy = queue[head++];
+            const cIdx = (cy * w + cx) * 4;
+
+            const dr = data[cIdx] - bgR;
+            const dg = data[cIdx + 1] - bgG;
+            const db = data[cIdx + 2] - bgB;
+            const distSq = dr * dr + dg * dg + db * db;
+
+            if (distSq <= tolSq) {
+                if (distSq <= featherStartSq) {
+                    data[cIdx + 3] = 0;
+                } else {
+                    const dist = Math.sqrt(distSq);
+                    const alpha = Math.floor(((dist - featherStart) / (tolerance - featherStart)) * 255);
+                    data[cIdx + 3] = Math.min(data[cIdx + 3], alpha);
+                }
+
+                const neighbors = [
+                    [cx + 1, cy], [cx - 1, cy],
+                    [cx, cy + 1], [cx, cy - 1]
+                ];
+
+                for (const [nx, ny] of neighbors) {
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                        const nPos = ny * w + nx;
+                        if (!visited[nPos]) {
+                            visited[nPos] = 1;
+                            queue.push(nx, ny);
+                        }
+                    }
+                }
+            }
+        }
+
+        tempCtx.putImageData(imgData, 0, 0);
+        return tempCanvas;
+    }
+
+    if (autoRemoveBgBtn) {
+        autoRemoveBgBtn.addEventListener('click', async () => {
+            if (uploadedImages.length === 0) return;
+            const target = uploadedImages[0];
+            const sourceImg = rawOriginalImage || target.image;
+
+            autoRemoveBgBtn.disabled = true;
+            autoRemoveBgBtn.innerHTML = '<span>⏳ AI Removing Background...</span>';
+
+            try {
+                if (!cachedAiMaskCanvas) {
+                    cachedAiMaskCanvas = await extractAiPersonMask(sourceImg);
+                }
+
+                const processedCanvas = applyAiMaskToImage(sourceImg, cachedAiMaskCanvas, bgTolerance);
+                target.image = processedCanvas;
+
+                autoRemoveBgBtn.innerHTML = '<span>✨ AI Background Removed</span>';
+                if (resetBgBtn) resetBgBtn.style.display = 'inline-flex';
+                if (bgToleranceBox) bgToleranceBox.style.display = 'block';
+                renderPreview();
+                updateImageList();
+            } catch (err) {
+                console.warn('AI segmentation failed, falling back to flood-fill:', err);
+                const fallbackCanvas = processBackgroundRemovalFallback(sourceImg, bgTolerance);
+                target.image = fallbackCanvas;
+
+                autoRemoveBgBtn.innerHTML = '<span>🪄 Background Removed</span>';
+                if (resetBgBtn) resetBgBtn.style.display = 'inline-flex';
+                if (bgToleranceBox) bgToleranceBox.style.display = 'block';
+                renderPreview();
+                updateImageList();
+            } finally {
+                autoRemoveBgBtn.disabled = false;
+            }
+        });
+    }
+
+    if (resetBgBtn) {
+        resetBgBtn.addEventListener('click', () => {
+            if (uploadedImages.length === 0 || !rawOriginalImage) return;
+            uploadedImages[0].image = rawOriginalImage;
+            cachedAiMaskCanvas = null;
+            resetBgBtn.style.display = 'none';
+            if (bgToleranceBox) bgToleranceBox.style.display = 'none';
+            if (autoRemoveBgBtn) autoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+            renderPreview();
+            updateImageList();
+        });
+    }
+
+    if (bgToleranceSlider) {
+        bgToleranceSlider.addEventListener('input', (e) => {
+            bgTolerance = parseInt(e.target.value);
+            if (bgToleranceVal) bgToleranceVal.textContent = bgTolerance;
+            if (uploadedImages.length > 0 && rawOriginalImage) {
+                if (cachedAiMaskCanvas) {
+                    const processedCanvas = applyAiMaskToImage(rawOriginalImage, cachedAiMaskCanvas, bgTolerance);
+                    uploadedImages[0].image = processedCanvas;
+                    renderPreview();
+                } else {
+                    const processedCanvas = processBackgroundRemovalFallback(rawOriginalImage, bgTolerance);
+                    uploadedImages[0].image = processedCanvas;
+                    renderPreview();
+                }
+            }
+        });
+    }
 
     // Event listeners
     photoUpload.addEventListener('change', handleImageUpload);
@@ -356,12 +736,21 @@
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
+                rawOriginalImage = img;
+                cachedAiMaskCanvas = null;
+                if (resetBgBtn) resetBgBtn.style.display = 'none';
+                if (bgToleranceBox) bgToleranceBox.style.display = 'none';
+                if (autoRemoveBgBtn) autoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+
                 // Add new image to array with default count of 8
                 uploadedImages.push({
                     image: img,
+                    rawOriginal: img,
                     name: file.name,
                     count: 8
                 });
+                
+                if (photoAdjustCard) photoAdjustCard.style.display = 'block';
                 
                 renderPreview();
                 updateImageList();
@@ -452,6 +841,9 @@
             printBtn.style.display = 'none';
             const imageList = document.getElementById('imageList');
             if (imageList) imageList.remove();
+            if (photoAdjustCard) photoAdjustCard.style.display = 'none';
+            if (canvasEmptyState) canvasEmptyState.style.display = 'block';
+            if (canvas) canvas.style.display = 'none';
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
         } else {
@@ -464,8 +856,13 @@
         if (uploadedImages.length === 0) {
             printBtn.style.display = 'none';
             generateBtn.style.display = 'none';
+            if (canvasEmptyState) canvasEmptyState.style.display = 'block';
+            if (canvas) canvas.style.display = 'none';
             return;
         }
+
+        if (canvasEmptyState) canvasEmptyState.style.display = 'none';
+        if (canvas) canvas.style.display = 'block';
 
         // Show print and generate buttons
         printBtn.style.display = 'inline-flex';
@@ -631,33 +1028,47 @@
     }
 
     function drawPhoto(img, x, y, width, height) {
-        // Calculate scaling to fit entire image within the box (contain mode)
         const imgAspect = img.width / img.height;
         const boxAspect = width / height;
 
-        let drawWidth, drawHeight, offsetX, offsetY;
-
-        // Scale to fit the entire image without cropping
-        if (imgAspect > boxAspect) {
-            // Image is wider - fit by width
-            drawWidth = width;
-            drawHeight = width / imgAspect;
-            offsetX = 0;
-            offsetY = (height - drawHeight) / 2;
+        let baseWidth, baseHeight;
+        if (photoFitMode === 'cover') {
+            // Fill mode: fill the entire passport box
+            if (imgAspect > boxAspect) {
+                baseHeight = height;
+                baseWidth = height * imgAspect;
+            } else {
+                baseWidth = width;
+                baseHeight = width / imgAspect;
+            }
         } else {
-            // Image is taller - fit by height
-            drawHeight = height;
-            drawWidth = height * imgAspect;
-            offsetX = (width - drawWidth) / 2;
-            offsetY = 0;
+            // Contain mode: fit the entire original image inside box
+            if (imgAspect > boxAspect) {
+                baseWidth = width;
+                baseHeight = width / imgAspect;
+            } else {
+                baseHeight = height;
+                baseWidth = height * imgAspect;
+            }
         }
 
-        // Fill background with white in case image doesn't fill the box
-        ctx.fillStyle = 'white';
+        const scale = photoScale || 1.0;
+        const drawWidth = baseWidth * scale;
+        const drawHeight = baseHeight * scale;
+        const offsetX = (width - drawWidth) / 2;
+        const offsetY = (height - drawHeight) / 2 + (photoOffsetY || 0) * (height / 100);
+
+        // Fill background with chosen background color (default White, Light Blue, or Sky Blue)
+        ctx.fillStyle = photoBgColor || '#FFFFFF';
         ctx.fillRect(x, y, width, height);
 
-        // Draw the entire image without clipping - no zoom, no crop
+        // Draw image clipped inside photo box so zoom/scale doesn't bleed outside
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+        ctx.clip();
         ctx.drawImage(img, x + offsetX, y + offsetY, drawWidth, drawHeight);
+        ctx.restore();
 
         // Draw black border around passport photo if enabled
         const hasBorder = enableBorder ? enableBorder.checked : true;

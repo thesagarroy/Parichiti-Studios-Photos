@@ -1,12 +1,12 @@
-# 📸 Free Passport Photo Generator
+# 📸 Parichiti Studios - Passport Photo Suite
 
 **Create professional passport photos instantly - 100% free, offline, and private!**
 
-[![Version](https://img.shields.io/badge/Version-2.0.0-purple?style=for-the-badge)](https://github.com/rizwansoaib/passport-photo-generator)
+[![Version](https://img.shields.io/badge/Version-2.1.0-purple?style=for-the-badge)](https://github.com/thesagarroy/Parichiti-Studios-Photos)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 [![PWA](https://img.shields.io/badge/PWA-Ready-blue?style=for-the-badge)](#)
 
-Best free passport photo maker for India, USA, Canada, UK, Schengen, China and 200+ countries.
+A modern biometric photo studio by **Parichiti Digital Services**, developed by **Sagar Roy**. Tailored for Indian Passport (35×45mm), PAN Card (25×35mm), Stamp Size (25×30mm), and OCI.
 
 ---
 
@@ -32,17 +32,17 @@ Best free passport photo maker for India, USA, Canada, UK, Schengen, China and 2
 
 ---
 
-## 🌍 Supported Countries
+## 🇮🇳 Supported Indian Photo Sizes
 
-| Country | Size | Use For |
-|---------|------|---------|
-| India | 35×45mm | Passport, Visa, Aadhaar |
-| UK | 35×45mm | Passport, Visa, License |
-| USA | 51×51mm (2×2") | Passport, Visa, Green Card |
-| Canada | 50×70mm | Passport, PR Card, Visa |
-| Schengen | 35×45mm | European Visa |
-| China | 33×48mm | Chinese Visa |
-| Custom | 20-150mm | Any country |
+| Photo Type | Size (mm) | Use For |
+|------------|-----------|---------|
+| Indian Passport | 35×45mm | Passport, Police Verification, SSC, Govt Exams |
+| PAN Card | 25×35mm | NSDL, UTIITSL PAN Applications |
+| Stamp Size | 25×30mm | Banks, Colleges, School Admissions |
+| Mini Stamp Size | 20×25mm | Identity Cards, Service Books |
+| USA Visa / OCI | 51×51mm (2×2") | OCI Card & US Visa |
+| NEET Postcard | 102×152mm (4×6") | NEET Exam Postcard Photo |
+| Custom Size | Any mm | Custom Requirements |
 
 ---
 
@@ -52,7 +52,7 @@ Best free passport photo maker for India, USA, Canada, UK, Schengen, China and 2
 
 ```bash
 # Clone the repository
-git clone https://github.com/rizwansoaib/passport-photo-generator.git
+git clone https://github.com/thesagarroy/Parichiti-Studios-Photos.git
 
 # Navigate to directory
 cd passport-photo-generator
@@ -65,7 +65,7 @@ open index.html
 
 **Download Pre-built Apps:**
 
-Download the latest desktop app for your platform from the [Releases](https://github.com/rizwansoaib/passport-photo-generator/releases) page:
+Download the latest desktop app for your platform from the [Releases](https://github.com/thesagarroy/Parichiti-Studios-Photos/releases) page:
 
 - **macOS**: `.dmg` or `.zip` (supports both Intel and Apple Silicon)
 - **Windows**: `.exe` installer or portable `.exe` (32-bit and 64-bit)
@@ -77,7 +77,7 @@ All releases include SHA256 checksums for security verification.
 
 ```bash
 # Clone the repository
-git clone https://github.com/rizwansoaib/passport-photo-generator.git
+git clone https://github.com/thesagarroy/Parichiti-Studios-Photos.git
 
 # Navigate to directory
 cd passport-photo-generator
@@ -266,7 +266,7 @@ git push origin feature/amazing-feature
 MIT License - Free to use, modify, and distribute.
 
 ```
-Copyright (c) 2025 Rizwan Soaib
+Copyright (c) 2026 Parichiti Digital Services & Sagar Roy
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software to deal in the Software without restriction, including
@@ -278,13 +278,13 @@ Full license text in [LICENSE](LICENSE) file.
 
 ---
 
-## 👨‍💻 Developer
+## 👨‍💻 Developer & Company
 
-**Made with ❤️ in India by Rizwan Soaib**
+**Developed with ❤️ by Sagar Roy**
+**A product of Parichiti Digital Services**
 
-- GitHub: [@rizwansoaib](https://github.com/rizwansoaib)
-- LinkedIn: [rizwansoaib](https://linkedin.com/in/rizwansoaib)
-- Twitter: [@rizwansoaib](https://twitter.com/rizwansoaib)
+- GitHub: [@thesagarroy](https://github.com/thesagarroy)
+- Repository: [Parichiti-Studios-Photos](https://github.com/thesagarroy/Parichiti-Studios-Photos)
 
 ---
 
@@ -300,8 +300,7 @@ Special thanks to:
 ## 📞 Support
 
 - **Documentation:** This README
-- **Issues:** [GitHub Issues](https://github.com/rizwansoaib/passport-photo-generator/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/rizwansoaib/passport-photo-generator/discussions)
+- **Issues:** [GitHub Issues](https://github.com/thesagarroy/Parichiti-Studios-Photos/issues)
 
 ---
 
@@ -313,6 +312,6 @@ If this tool helped you, please star it!
 
 ---
 
-**© 2025 Rizwan Soaib • MIT License**
+**© 2026 Parichiti Digital Services • Developed by Sagar Roy • MIT License**
 
 *Built in India 🇮🇳 • Used Worldwide 🌍 • Free Forever 💯*

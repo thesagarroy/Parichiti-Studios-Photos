@@ -80,7 +80,7 @@ function createWindow() {
           label: 'About',
           click: async () => {
             const { shell } = require('electron');
-            await shell.openExternal('https://github.com/rizwansoaib/passport-photo-generator');
+            await shell.openExternal('https://github.com/thesagarroy/Parichiti-Studios-Photos');
           }
         },
         {

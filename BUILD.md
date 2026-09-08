@@ -189,15 +189,15 @@ Build configuration is in `package.json` under the `build` key:
 ```json
 {
   "build": {
-    "appId": "com.rizwansoaib.passportphoto",
-    "productName": "Passport Photo Generator",
+    "appId": "com.parichiti.passportphoto",
+    "productName": "Parichiti Studios - Passport Photo Generator",
     "directories": {
       "output": "dist"
     },
     "publish": {
       "provider": "github",
-      "owner": "rizwansoaib",
-      "repo": "passport-photo-generator"
+      "owner": "thesagarroy",
+      "repo": "Parichiti-Studios-Photos"
     },
     ...
   }

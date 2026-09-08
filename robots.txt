@@ -5,7 +5,7 @@ User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://rizwansoaib.github.io/passport-photo-generator/sitemap.xml
+Sitemap: https://thesagarroy.github.io/Parichiti-Studios-Photos/sitemap.xml
 
 # Crawl delay (optional, helps prevent server overload)
 Crawl-delay: 1

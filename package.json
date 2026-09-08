@@ -26,19 +26,19 @@
     "electron"
   ],
   "author": {
-    "name": "Rizwan Soaib",
-    "email": "rizwansoaib@example.com",
-    "url": "https://github.com/rizwansoaib"
+    "name": "Sagar Roy",
+    "company": "Parichiti Digital Services",
+    "url": "https://github.com/thesagarroy"
   },
   "license": "MIT",
-  "homepage": "https://github.com/rizwansoaib/passport-photo-generator",
+  "homepage": "https://thesagarroy.github.io/Parichiti-Studios-Photos/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rizwansoaib/passport-photo-generator.git"
+    "url": "https://github.com/thesagarroy/Parichiti-Studios-Photos.git"
   },
   "build": {
-    "appId": "com.rizwansoaib.passportphoto",
-    "productName": "Passport Photo Generator",
+    "appId": "com.parichiti.passportphoto",
+    "productName": "Parichiti Studios - Passport Photo Generator",
     "directories": {
       "output": "dist"
     },
@@ -54,8 +54,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "rizwansoaib",
-      "repo": "passport-photo-generator"
+      "owner": "thesagarroy",
+      "repo": "Parichiti-Studios-Photos"
     },
     "mac": {
       "category": "public.app-category.photography",

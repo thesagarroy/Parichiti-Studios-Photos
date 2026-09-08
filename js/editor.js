@@ -63,32 +63,23 @@
     const DPI = 300;
     const MM_TO_INCH = 25.4;
 
-    // Standard Photo Size Presets (dimensions in mm)
+    // Standard Photo Size Presets for India (dimensions in mm)
     const PHOTO_PRESETS = {
-        '35x45': { width: 35, height: 45, label: 'India / UK / Schengen (35×45 mm)' },
-        '51x51': { width: 51, height: 51, label: 'USA / India OCI 2×2" (51×51 mm)' },
-        '50x70': { width: 50, height: 70, label: 'Canada Passport / PR (50×70 mm)' },
-        '40x50': { width: 40, height: 50, label: 'Bangladesh Passport / Visa (40×50 mm)' },
-        '35x50': { width: 35, height: 50, label: 'Malaysia / Singapore Visa (35×50 mm)' },
-        '33x48': { width: 33, height: 48, label: 'China Passport / Visa (33×48 mm)' },
-        '40x60': { width: 40, height: 60, label: 'UAE / Dubai / Saudi Visa (40×60 mm)' },
-        '35x45_au': { width: 35, height: 45, label: 'Australia / New Zealand (35×45 mm)' },
-        '35x45_jp': { width: 35, height: 45, label: 'Japan / South Korea (35×45 mm)' },
-        '35x45_sg': { width: 35, height: 45, label: 'Singapore Passport (35×45 mm)' },
-        '25x35': { width: 25, height: 35, label: 'India PAN Card / Exam (25×35 mm)' },
-        '25x30': { width: 25, height: 30, label: 'Stamp Size - Standard (25×30 mm)' },
-        '30.5x38': { width: 30.5, height: 38, label: 'Stamp Size - Classic (30.5×38 mm)' },
-        '20x25': { width: 20, height: 25, label: 'Stamp Size - Mini (20×25 mm)' },
-        '38x51': { width: 38.1, height: 50.8, label: '1.5 × 2 Inch (38.1×50.8 mm)' },
-        '63.5x89': { width: 63.5, height: 88.9, label: '2R Wallet Size (63.5×89 mm)' },
-        '89x127': { width: 88.9, height: 127, label: '3R Card Photo (89×127 mm)' },
-        '101.6x152.4': { width: 101.6, height: 152.4, label: '4R Print Size (101.6×152.4 mm)' }
+        '35x45': { width: 35, height: 45, label: 'Indian Passport / Govt Exam (35×45 mm / 1.38×1.77 in)' },
+        '25x35': { width: 25, height: 35, label: 'PAN Card - NSDL / UTIITSL (25×35 mm / 0.98×1.38 in)' },
+        '30.5x38': { width: 30.5, height: 38, label: 'Classic Studio Stamp (30.5×38 mm / 1.2×1.5 in)' },
+        '25x30': { width: 25, height: 30, label: 'Stamp Size - Standard (25×30 mm / 0.98×1.18 in)' },
+        '20x25': { width: 20, height: 25, label: 'Stamp Size - Mini (20×25 mm / 0.79×0.98 in)' },
+        '51x51': { width: 51, height: 51, label: 'USA Visa / OCI (51×51 mm / 2×2 in)' },
+        '101.6x152.4': { width: 101.6, height: 152.4, label: 'NEET Postcard / 4R (102×152 mm / 4×6 in)' }
     };
 
     // State
     let originalImage = null;
     let cropper = null;
     let croppedCanvas = null;
+    let rawCroppedCanvas = null;
+    let editorBgTolerance = 35;
     let PHOTO_WIDTH = Math.round((35 / MM_TO_INCH) * DPI);
     let PHOTO_HEIGHT = Math.round((45 / MM_TO_INCH) * DPI);
     let adjustments = {
@@ -124,6 +115,9 @@
     
     const cropToolsCard = document.getElementById('cropToolsCard');
     const adjustmentsCard = document.getElementById('adjustmentsCard');
+    const bgColorCard = document.getElementById('bgColorCard');
+    const editorBgColorPicker = document.getElementById('editorBgColorPicker');
+    const editorBgHexDisplay = document.getElementById('editorBgHexDisplay');
     const sizeSelectionCard = document.getElementById('sizeSelectionCard');
     const editorPhotoSize = document.getElementById('editorPhotoSize');
     const editorPhotoSpacingSelect = document.getElementById('editorPhotoSpacingSelect');
@@ -144,6 +138,13 @@
     const cutLineStyleSelect = document.getElementById('cutLineStyleSelect');
     const cutLineColorPicker = document.getElementById('cutLineColorPicker');
     const cutLinesControls = document.getElementById('cutLinesControls');
+    
+    // Background Remover Elements
+    const editorAutoRemoveBgBtn = document.getElementById('editorAutoRemoveBgBtn');
+    const editorResetBgBtn = document.getElementById('editorResetBgBtn');
+    const editorBgToleranceBox = document.getElementById('editorBgToleranceBox');
+    const editorBgToleranceSlider = document.getElementById('editorBgToleranceSlider');
+    const editorBgToleranceVal = document.getElementById('editorBgToleranceVal');
     
     const themeToggle = document.getElementById('themeToggle');
     const themeIcon = document.querySelector('.theme-icon');
@@ -327,8 +328,19 @@
         showSection(previewArea);
         hideCard(cropToolsCard);
         showCard(adjustmentsCard);
+        showCard(bgColorCard);
         showCard(borderCard);
         
+        // Cache unmasked crop for background removal & sensitivity adjustments
+        rawCroppedCanvas = document.createElement('canvas');
+        rawCroppedCanvas.width = croppedCanvas.width;
+        rawCroppedCanvas.height = croppedCanvas.height;
+        const rawCtx = rawCroppedCanvas.getContext('2d');
+        rawCtx.drawImage(croppedCanvas, 0, 0);
+
+        if (editorResetBgBtn) editorResetBgBtn.style.display = 'none';
+        if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'none';
+
         renderPreview();
     });
 
@@ -350,8 +362,19 @@
         showSection(previewArea);
         hideCard(cropToolsCard);
         showCard(adjustmentsCard);
+        showCard(bgColorCard);
         showCard(borderCard);
         
+        // Cache unmasked crop for background removal & sensitivity adjustments
+        rawCroppedCanvas = document.createElement('canvas');
+        rawCroppedCanvas.width = croppedCanvas.width;
+        rawCroppedCanvas.height = croppedCanvas.height;
+        const rawCtx = rawCroppedCanvas.getContext('2d');
+        rawCtx.drawImage(croppedCanvas, 0, 0);
+
+        if (editorResetBgBtn) editorResetBgBtn.style.display = 'none';
+        if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'none';
+
         renderPreview();
     });
 
@@ -359,6 +382,7 @@
         showSection(cropArea);
         showCard(cropToolsCard);
         hideCard(adjustmentsCard);
+        hideCard(bgColorCard);
         hideCard(borderCard);
         hideCard(cutLinesCard);
     });
@@ -461,6 +485,291 @@
         if (croppedCanvas) renderPreview();
     });
 
+    // Smart Edge-Floodfill Background Removal (Client-side Canvas)
+    function processBackgroundRemoval(sourceCanvas, tolerance) {
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(sourceCanvas, 0, 0);
+
+        const imgData = tempCtx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+
+        // Sample corner & top-edge background color
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        const samplePoints = [
+            [0, 0], [1, 0], [2, 0], [w - 1, 0], [w - 2, 0], [w - 3, 0],
+            [0, 1], [w - 1, 1],
+            [Math.floor(w * 0.25), 0], [Math.floor(w * 0.5), 0], [Math.floor(w * 0.75), 0]
+        ];
+
+        for (const [sx, sy] of samplePoints) {
+            if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
+                const idx = (sy * w + sx) * 4;
+                rSum += data[idx];
+                gSum += data[idx + 1];
+                bSum += data[idx + 2];
+                count++;
+            }
+        }
+
+        const bgR = rSum / (count || 1);
+        const bgG = gSum / (count || 1);
+        const bgB = bSum / (count || 1);
+
+        const tolSq = tolerance * tolerance;
+        const featherStart = tolerance * 0.65;
+        const featherStartSq = featherStart * featherStart;
+
+        const visited = new Uint8Array(w * h);
+        const queue = [];
+
+        // Start flood-fill from top border and side borders
+        for (let x = 0; x < w; x++) {
+            queue.push(x, 0);
+            visited[x] = 1;
+        }
+        const maxH = Math.floor(h * 0.9);
+        for (let y = 1; y < maxH; y++) {
+            queue.push(0, y);
+            visited[y * w] = 1;
+            queue.push(w - 1, y);
+            visited[y * w + (w - 1)] = 1;
+        }
+
+        let head = 0;
+        while (head < queue.length) {
+            const cx = queue[head++];
+            const cy = queue[head++];
+            const cIdx = (cy * w + cx) * 4;
+
+            const dr = data[cIdx] - bgR;
+            const dg = data[cIdx + 1] - bgG;
+            const db = data[cIdx + 2] - bgB;
+            const distSq = dr * dr + dg * dg + db * db;
+
+            if (distSq <= tolSq) {
+                if (distSq <= featherStartSq) {
+                    data[cIdx + 3] = 0;
+                } else {
+                    const dist = Math.sqrt(distSq);
+                    const alpha = Math.floor(((dist - featherStart) / (tolerance - featherStart)) * 255);
+                    data[cIdx + 3] = Math.min(data[cIdx + 3], alpha);
+                }
+
+                const neighbors = [
+                    [cx + 1, cy], [cx - 1, cy],
+                    [cx, cy + 1], [cx, cy - 1]
+                ];
+
+                for (const [nx, ny] of neighbors) {
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                        const nPos = ny * w + nx;
+                        if (!visited[nPos]) {
+                            visited[nPos] = 1;
+                            queue.push(nx, ny);
+                        }
+                    }
+                }
+            }
+        }
+
+        tempCtx.putImageData(imgData, 0, 0);
+        return tempCanvas;
+    }
+
+    // ==========================================================================
+    // Neural AI Background Removal for Pro Editor (Google MediaPipe)
+    // ==========================================================================
+    let editorSelfieSegmenter = null;
+    let editorCachedAiMaskCanvas = null;
+
+    function getEditorAiSegmenter() {
+        if (editorSelfieSegmenter) return Promise.resolve(editorSelfieSegmenter);
+        if (typeof SelfieSegmentation === 'undefined') {
+            return Promise.reject(new Error('MediaPipe SelfieSegmentation library not loaded'));
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                const segmenter = new SelfieSegmentation({
+                    locateFile: (file) => {
+                        if (window.location.protocol === 'file:') {
+                            return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
+                        }
+                        return `./lib/mediapipe/${file}`;
+                    }
+                });
+
+                segmenter.setOptions({
+                    modelSelection: 1,
+                });
+
+                editorSelfieSegmenter = segmenter;
+                resolve(segmenter);
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function extractEditorAiPersonMask(sourceCanvas) {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const segmenter = await getEditorAiSegmenter();
+                let hasReturned = false;
+
+                const timeoutId = setTimeout(() => {
+                    if (!hasReturned) {
+                        hasReturned = true;
+                        reject(new Error('AI segmentation timed out'));
+                    }
+                }, 15000);
+
+                segmenter.onResults((results) => {
+                    if (hasReturned) return;
+                    hasReturned = true;
+                    clearTimeout(timeoutId);
+
+                    if (results && results.segmentationMask) {
+                        const maskCanvas = document.createElement('canvas');
+                        maskCanvas.width = sourceCanvas.width;
+                        maskCanvas.height = sourceCanvas.height;
+                        const mCtx = maskCanvas.getContext('2d');
+                        mCtx.drawImage(results.segmentationMask, 0, 0, maskCanvas.width, maskCanvas.height);
+                        resolve(maskCanvas);
+                    } else {
+                        reject(new Error('Invalid mask received from AI model'));
+                    }
+                });
+
+                await segmenter.send({ image: sourceCanvas });
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function applyEditorAiMask(sourceCanvas, maskCanvas, toleranceVal = 35) {
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = w;
+        outCanvas.height = h;
+        const outCtx = outCanvas.getContext('2d');
+
+        outCtx.drawImage(sourceCanvas, 0, 0);
+        const imgData = outCtx.getImageData(0, 0, w, h);
+        const pixels = imgData.data;
+
+        const mCtx = maskCanvas.getContext('2d');
+        const maskData = mCtx.getImageData(0, 0, w, h).data;
+
+        const cutoff = (toleranceVal / 100) * 255;
+        const feather = 16;
+        const minVal = Math.max(0, cutoff - feather);
+        const maxVal = Math.min(255, cutoff + feather);
+        const range = maxVal - minVal || 1;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            const conf = maskData[i];
+            if (conf <= minVal) {
+                pixels[i + 3] = 0;
+            } else if (conf < maxVal) {
+                const alphaFactor = (conf - minVal) / range;
+                pixels[i + 3] = Math.round(pixels[i + 3] * alphaFactor);
+            }
+        }
+
+        outCtx.putImageData(imgData, 0, 0);
+        return outCanvas;
+    }
+
+    if (editorAutoRemoveBgBtn) {
+        editorAutoRemoveBgBtn.addEventListener('click', async () => {
+            if (!croppedCanvas) return;
+            if (!rawCroppedCanvas) {
+                rawCroppedCanvas = document.createElement('canvas');
+                rawCroppedCanvas.width = croppedCanvas.width;
+                rawCroppedCanvas.height = croppedCanvas.height;
+                const rCtx = rawCroppedCanvas.getContext('2d');
+                rCtx.drawImage(croppedCanvas, 0, 0);
+            }
+
+            editorAutoRemoveBgBtn.disabled = true;
+            editorAutoRemoveBgBtn.innerHTML = '<span>⏳ AI Removing Background...</span>';
+
+            try {
+                if (!editorCachedAiMaskCanvas) {
+                    editorCachedAiMaskCanvas = await extractEditorAiPersonMask(rawCroppedCanvas);
+                }
+
+                croppedCanvas = applyEditorAiMask(rawCroppedCanvas, editorCachedAiMaskCanvas, editorBgTolerance);
+                editorAutoRemoveBgBtn.innerHTML = '<span>✨ AI Background Removed</span>';
+                if (editorResetBgBtn) editorResetBgBtn.style.display = 'inline-flex';
+                if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'block';
+                renderPreview();
+                if (a4Area && a4Area.style.display !== 'none') {
+                    generateA4Layout();
+                }
+            } catch (err) {
+                console.warn('Pro Editor AI segmentation failed, fallback to flood-fill:', err);
+                croppedCanvas = processBackgroundRemoval(rawCroppedCanvas, editorBgTolerance);
+                editorAutoRemoveBgBtn.innerHTML = '<span>🪄 Background Removed</span>';
+                if (editorResetBgBtn) editorResetBgBtn.style.display = 'inline-flex';
+                if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'block';
+                renderPreview();
+                if (a4Area && a4Area.style.display !== 'none') {
+                    generateA4Layout();
+                }
+            } finally {
+                editorAutoRemoveBgBtn.disabled = false;
+            }
+        });
+    }
+
+    if (editorResetBgBtn) {
+        editorResetBgBtn.addEventListener('click', () => {
+            if (!rawCroppedCanvas) return;
+            croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = rawCroppedCanvas.width;
+            croppedCanvas.height = rawCroppedCanvas.height;
+            const rCtx = croppedCanvas.getContext('2d');
+            rCtx.drawImage(rawCroppedCanvas, 0, 0);
+            editorCachedAiMaskCanvas = null;
+            editorResetBgBtn.style.display = 'none';
+            if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'none';
+            if (editorAutoRemoveBgBtn) editorAutoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+            renderPreview();
+            if (a4Area && a4Area.style.display !== 'none') {
+                generateA4Layout();
+            }
+        });
+    }
+
+    if (editorBgToleranceSlider) {
+        editorBgToleranceSlider.addEventListener('input', (e) => {
+            editorBgTolerance = parseInt(e.target.value);
+            if (editorBgToleranceVal) editorBgToleranceVal.textContent = editorBgTolerance;
+            if (rawCroppedCanvas) {
+                if (editorCachedAiMaskCanvas) {
+                    croppedCanvas = applyEditorAiMask(rawCroppedCanvas, editorCachedAiMaskCanvas, editorBgTolerance);
+                } else {
+                    croppedCanvas = processBackgroundRemoval(rawCroppedCanvas, editorBgTolerance);
+                }
+                renderPreview();
+                if (a4Area && a4Area.style.display !== 'none') {
+                    generateA4Layout();
+                }
+            }
+        });
+    }
+
     // Render Preview
     function renderPreview() {
         if (!croppedCanvas) return;
@@ -516,6 +825,7 @@
         showSection(a4Area);
         hideCard(adjustmentsCard);
         showCard(sizeSelectionCard);
+        showCard(bgColorCard);
         showCard(borderCard);
         showCard(cutLinesCard);
         
@@ -963,6 +1273,48 @@
             if (a4Area && a4Area.style.display !== 'none') {
                 generateA4Layout();
             }
+        });
+    }
+
+    // Background Color Event Listeners
+    function setEditorBgColor(color) {
+        backgroundColor = color;
+        if (editorBgColorPicker) editorBgColorPicker.value = color;
+        if (editorBgHexDisplay) editorBgHexDisplay.textContent = color.toUpperCase();
+
+        const presetBtns = document.querySelectorAll('#bgColorCard .bg-preset-btn');
+        if (presetBtns) {
+            presetBtns.forEach(btn => {
+                const btnColor = btn.getAttribute('data-color');
+                if (btnColor && btnColor.toLowerCase() === color.toLowerCase()) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        if (croppedCanvas) {
+            renderPreview();
+            if (a4Area && a4Area.style.display !== 'none') {
+                generateA4Layout();
+            }
+        }
+    }
+
+    if (editorBgColorPicker) {
+        editorBgColorPicker.addEventListener('input', (e) => {
+            setEditorBgColor(e.target.value);
+        });
+    }
+
+    const editorPresetBtns = document.querySelectorAll('#bgColorCard .bg-preset-btn');
+    if (editorPresetBtns) {
+        editorPresetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const color = btn.getAttribute('data-color');
+                if (color) setEditorBgColor(color);
+            });
         });
     }
 
