@@ -130,6 +130,12 @@
             </a>
 
             <div class="nav-actions">
+                <a href="print.html" class="btn-outline" style="text-decoration: none; padding: 6px 12px; font-size: 12px;">
+                    <span>🖨️ Photo Print</span>
+                </a>
+                <a href="editor.html" class="btn-outline" style="text-decoration: none; padding: 6px 12px; font-size: 12px;">
+                    <span>🎨 Pro Editor</span>
+                </a>
                 <div class="status-pill" title="100% offline processing inside your browser">
                     <span class="status-dot"></span>
                     <span>100% Offline</span>
@@ -248,10 +254,39 @@
                 <!-- Smart Background Removal Tool -->
                 <div class="bg-remover-wrapper" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">🪄 Smart AI Background Remover</span>
-                        <span class="badge-pill-soft" style="background: rgba(99, 102, 241, 0.12); color: var(--primary);">🤖 AI Neural Model</span>
+                        <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">🪄 Studio AI Background Remover</span>
+                        <span class="badge-pill-soft" style="background: rgba(99, 102, 241, 0.12); color: var(--primary);">🤖 Dual Engine</span>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Perfect hair-level portrait cutout powered by client-side neural AI. 100% offline & private.</p>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Select AI engine & remove background with high-definition edge matting & anti-halo.</p>
+
+                    <!-- AI Model Selection Chips -->
+                    <div class="ai-model-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <label class="ai-model-chip active" id="modelFastChip">
+                            <input type="radio" name="aiModelChoice" value="fast" checked style="display: none;" />
+                            <div class="chip-inner">
+                                <span class="chip-title">⚡ Smart Studio AI</span>
+                                <span class="chip-subtitle">Instant & 100% Offline</span>
+                            </div>
+                        </label>
+                        <label class="ai-model-chip" id="modelUltraChip">
+                            <input type="radio" name="aiModelChoice" value="ultra" style="display: none;" />
+                            <div class="chip-inner">
+                                <span class="chip-title">🌟 Ultra Studio AI</span>
+                                <span class="chip-subtitle">1024px HD Model</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Progress / Status Indicator -->
+                    <div id="aiModelStatusBox" style="display: none; margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(99, 102, 241, 0.08); font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span id="aiModelStatusText" style="font-weight: 600; color: var(--primary);">Preparing AI model...</span>
+                            <span id="aiModelPercentText" style="font-weight: 700; color: var(--primary);"></span>
+                        </div>
+                        <div class="ai-progress-track" style="height: 6px; background: rgba(99, 102, 241, 0.2); border-radius: 4px; overflow: hidden;">
+                            <div id="aiProgressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s ease;"></div>
+                        </div>
+                    </div>
                     
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button type="button" class="btn-tool btn-remove-bg" id="autoRemoveBgBtn">
@@ -262,13 +297,46 @@
                         </button>
                     </div>
 
-                    <div id="bgToleranceBox" style="display: none; margin-top: 10px;">
-                        <div class="slider-group">
-                            <label>
-                                <span>Sensitivity (Tolerance):</span>
+                    <!-- Fine-Tuning & Edge Matting Controls -->
+                    <div id="bgToleranceBox" style="display: none; margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--bg-tertiary, rgba(241, 245, 249, 0.6)); border: 1px solid var(--border-color);">
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🎛️ Real-Time Edge & Matting Controls</span>
+                            <span style="font-size: 10px; background: rgba(99, 102, 241, 0.15); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-weight: 600;">Live</span>
+                        </div>
+
+                        <!-- Sensitivity / Cutoff Slider -->
+                        <div class="slider-group" style="margin-bottom: 8px;">
+                            <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                <span>Sensitivity (Cutoff):</span>
                                 <span id="bgToleranceVal" style="font-weight: 700; color: var(--primary);">35</span>
                             </label>
                             <input type="range" id="bgToleranceSlider" min="10" max="80" value="35" step="1" />
+                        </div>
+
+                        <!-- Edge Feather / Softness Slider -->
+                        <div class="slider-group" style="margin-bottom: 8px;">
+                            <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                <span>Edge Softness (Feather):</span>
+                                <span id="bgFeatherVal" style="font-weight: 700; color: var(--primary);">16px</span>
+                            </label>
+                            <input type="range" id="bgFeatherSlider" min="2" max="36" value="16" step="1" />
+                        </div>
+
+                        <!-- Edge Shift / Trim Slider -->
+                        <div class="slider-group" style="margin-bottom: 8px;">
+                            <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                <span>Edge Trim (Contract / Shave):</span>
+                                <span id="bgEdgeShiftVal" style="font-weight: 700; color: var(--primary);">-1px</span>
+                            </label>
+                            <input type="range" id="bgEdgeShiftSlider" min="-4" max="4" value="-1" step="1" />
+                        </div>
+
+                        <!-- Anti-Halo Defringe Checkbox -->
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                            <input type="checkbox" id="bgDefringeToggle" checked style="accent-color: var(--primary); width: 15px; height: 15px; cursor: pointer;" />
+                            <label for="bgDefringeToggle" style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; margin: 0;">
+                                ✨ Anti-Halo (Remove wall color bleed from hair/edges)
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -593,6 +661,7 @@
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="lib/mediapipe/selfie_segmentation.js"></script>
+    <script src="js/mattingEngine.js"></script>
     <script src="js/app.js"></script>
 
     <!-- Mobile View & Preset Chips Controller -->

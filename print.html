@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#6366f1">
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>Parichiti Studios - Simple Browser Photo Print | 100% Free & Direct Print</title>
+    <meta name="title" content="Parichiti Studios - Simple Browser Photo Print | 100% Free & Direct Print">
+    <meta name="description" content="Simple browser-based photo printing with Standard, High, and Best Photo Quality options for Epson and all printers. 100% private and offline by Parichiti Digital Services.">
+    <meta name="author" content="Sagar Roy">
+    <meta name="robots" content="index, follow">
+
+    <!-- Fonts & CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Top Studio Navbar -->
+    <header class="studio-nav">
+        <div class="nav-container">
+            <a href="index.html" class="brand-logo">
+                <div class="brand-icon-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">Parichiti Studios</span>
+                    <span class="brand-sub">Simple Photo Print</span>
+                </div>
+            </a>
+
+            <div class="nav-actions">
+                <a href="index.html" class="btn-outline" style="text-decoration: none; padding: 6px 12px; font-size: 12px;">
+                    <span>📐 Passport Studio</span>
+                </a>
+                <a href="editor.html" class="btn-outline" style="text-decoration: none; padding: 6px 12px; font-size: 12px;">
+                    <span>🎨 Pro Editor</span>
+                </a>
+                <div class="status-pill" title="100% offline processing inside your browser">
+                    <span class="status-dot"></span>
+                    <span>100% Offline</span>
+                </div>
+                <button class="theme-toggle-btn" id="themeToggle" title="Toggle Theme" aria-label="Toggle Dark Mode">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Print Workspace -->
+    <main class="simple-print-container">
+        <div class="simple-print-card">
+            <div class="card-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 20px;">
+                <div class="card-step">🖨️</div>
+                <div>
+                    <h1 class="card-title" style="font-size: 20px;">Direct Photo Print</h1>
+                    <p class="card-desc">Select a photo, choose your print quality, and print directly to your Epson or home printer.</p>
+                </div>
+            </div>
+
+            <!-- Upload Dropzone (Visible when no photo is loaded) -->
+            <div class="dropzone-box" id="printDropzone">
+                <input type="file" id="printPhotoInput" accept="image/*" class="file-input-hidden" />
+                <div class="dropzone-icon-ring">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </div>
+                <div class="dropzone-text">
+                    <span class="dropzone-action">Choose Photo to Print</span>
+                </div>
+                <span class="dropzone-hint">Supports JPG, PNG, WebP • 100% Private & In-Browser</span>
+            </div>
+
+            <!-- Photo Preview & Controls (Visible after photo is selected) -->
+            <div id="printPhotoContent" style="display: none;">
+                <!-- 1. Photo Preview -->
+                <div class="photo-preview-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Photo Preview</span>
+                        <button type="button" id="changePhotoBtn" class="btn-outline" style="padding: 4px 10px; font-size: 11px;">
+                            <span>🔄 Change Photo</span>
+                        </button>
+                    </div>
+
+                    <div class="preview-stage-frame">
+                        <img id="previewImageElement" src="" alt="Selected Photo" class="aspect-preserved-preview" />
+                    </div>
+
+                    <div id="photoMetaInfo" class="photo-meta-bar" style="margin-top: 10px;">
+                        <span id="photoDimensionText">Resolution: Loading...</span>
+                        <span id="photoQualityRenderText">Render DPI: 300 DPI</span>
+                    </div>
+                </div>
+
+                <!-- 2. Print Quality Options -->
+                <div class="print-quality-section" style="margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border-color);">
+                    <label class="setting-title" style="display: block; margin-bottom: 12px; font-size: 14px; font-weight: 700; color: var(--text-primary);">
+                        Print Quality
+                    </label>
+
+                    <div class="quality-radio-list">
+                        <!-- Standard Quality -->
+                        <label class="quality-option-card">
+                            <input type="radio" name="printQualityChoice" value="standard" class="quality-radio-input" />
+                            <div class="quality-option-inner">
+                                <div class="quality-title-row">
+                                    <span class="quality-name">Standard Quality</span>
+                                    <span class="quality-tag">Fast • 150 DPI</span>
+                                </div>
+                                <p class="quality-desc">Standard print rendering. Fast processing, ideal for quick proofs and regular paper.</p>
+                            </div>
+                        </label>
+
+                        <!-- High Quality -->
+                        <label class="quality-option-card active">
+                            <input type="radio" name="printQualityChoice" value="high" checked class="quality-radio-input" />
+                            <div class="quality-option-inner">
+                                <div class="quality-title-row">
+                                    <span class="quality-name">High Quality</span>
+                                    <span class="quality-tag recommended">Recommended • 300 DPI</span>
+                                </div>
+                                <p class="quality-desc">High-density sampling with bicubic edge smoothing. Crisp, vibrant output for photo paper.</p>
+                            </div>
+                        </label>
+
+                        <!-- Best Photo Quality -->
+                        <label class="quality-option-card">
+                            <input type="radio" name="printQualityChoice" value="best" class="quality-radio-input" />
+                            <div class="quality-option-inner">
+                                <div class="quality-title-row">
+                                    <span class="quality-name">Best Photo Quality</span>
+                                    <span class="quality-tag premium">Studio Master • Max Res</span>
+                                </div>
+                                <p class="quality-desc">Uses 100% loss-free original resolution with micro-contrast tuning. Maximum fidelity for Epson Photo Paper.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 3. Print Button Action -->
+                <div class="print-action-box" style="margin-top: 24px;">
+                    <button type="button" id="startPrintBtn" class="btn-primary" style="width: 100%; padding: 14px 20px; font-size: 16px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                        <span>🖨️ Print Photo</span>
+                    </button>
+                    <p style="text-align: center; font-size: 11.5px; color: var(--text-muted); margin-top: 8px;">
+                        Clicking Print opens your browser's native print dialog. Select your <strong>Epson</strong> or connected printer to begin printing.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Hidden Print Target: Only this element renders in @media print -->
+    <div id="printTarget" class="print-only-container">
+        <img id="printTargetImage" src="" alt="Print Output" />
+    </div>
+
+    <!-- Modern Studio Footer -->
+    <footer class="app-footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <span>📸</span>
+                        <span>Parichiti Studios</span>
+                    </div>
+                    <p class="footer-tagline">
+                        Simple browser-based photo printing by <strong>Parichiti Digital Services</strong>.
+                    </p>
+                </div>
+                <div class="footer-credits">
+                    <div class="credit-card">
+                        <span class="credit-label">Developed by</span>
+                        <a href="https://github.com/thesagarroy" target="_blank" rel="noopener noreferrer" class="developer-link">
+                            <span class="dev-avatar">👨‍💻</span>
+                            <span class="dev-name">Sagar Roy</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-security">
+                    <span class="security-badge">🔒 100% Client-Side Privacy</span>
+                    <span>All photos are processed locally in your browser.</span>
+                </div>
+                <div>
+                    © 2026 <strong>Parichiti Digital Services</strong> • Developed with ❤️ by <strong>Sagar Roy</strong>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/printService.js"></script>
+</body>
+</html>

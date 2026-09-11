@@ -1,8 +1,8 @@
 {
-  "name": "passport-photo-generator",
-  "productName": "Passport Photo Generator",
-  "version": "2.0.0",
-  "description": "Create professional passport photos instantly - 100% free, offline, and private! Desktop app for Mac, Windows, and Linux.",
+  "name": "parichiti-studios-photos",
+  "productName": "Parichiti Studios - Passport Photo Studio",
+  "version": "2.1.0",
+  "description": "Create professional Indian passport, PAN, stamp, and visa photos instantly - 100% free, offline, and private! Windows Desktop App.",
   "main": "main.js",
   "scripts": {
     "start": "electron . --no-sandbox",
@@ -10,7 +10,7 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder --publish never",
     "dist:mac": "electron-builder --mac --publish never",
-    "dist:win": "electron-builder --win --publish never",
+    "dist:win": "electron-builder --win --x64 --publish never",
     "dist:linux": "electron-builder --linux --publish never",
     "dist:all": "electron-builder --mac --win --linux --publish never"
   },
@@ -19,9 +19,11 @@
     "photo",
     "generator",
     "visa",
-    "id",
-    "photo editor",
+    "pan card",
+    "stamp size",
+    "parichiti studios",
     "offline",
+    "windows app",
     "desktop app",
     "electron"
   ],
@@ -38,7 +40,7 @@
   },
   "build": {
     "appId": "com.parichiti.passportphoto",
-    "productName": "Parichiti Studios - Passport Photo Generator",
+    "productName": "Parichiti Studios - Passport Photo Studio",
     "directories": {
       "output": "dist"
     },
@@ -47,10 +49,12 @@
       "preload.js",
       "index.html",
       "editor.html",
+      "print.html",
       "manifest.json",
       "css/**/*",
       "js/**/*",
-      "assets/**/*"
+      "assets/**/*",
+      "lib/**/*"
     ],
     "publish": {
       "provider": "github",
@@ -80,17 +84,9 @@
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "zip",
           "arch": [
-            "x64",
-            "ia32"
-          ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         }
       ],
@@ -124,7 +120,12 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "shortcutName": "Parichiti Studios Photo Studio",
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "uninstallDisplayName": "Parichiti Studios - Passport Photo Studio",
+      "runAfterFinish": true
     }
   },
   "devDependencies": {

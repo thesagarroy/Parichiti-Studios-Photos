@@ -57,6 +57,49 @@
         localStorage.setItem('installPromptDismissed', 'true');
     });
 
+    // Windows Desktop App Integration
+    if (window.electronAPI && window.electronAPI.isElectron) {
+        if (installPrompt) {
+            installPrompt.style.display = 'none';
+        }
+        document.querySelectorAll('.status-pill').forEach(pill => {
+            pill.title = 'Parichiti Studios Windows Desktop App (100% Offline)';
+            const textSpan = pill.querySelector('span:last-child');
+            if (textSpan) textSpan.textContent = 'Windows App • 100% Offline';
+        });
+
+        if (window.electronAPI.onMenuAction) {
+            window.electronAPI.onMenuAction((action) => {
+                if (action === 'open-file') {
+                    if (window.electronAPI.openFileDialog) {
+                        window.electronAPI.openFileDialog().then(fileInfo => {
+                            if (fileInfo && fileInfo.dataUrl) {
+                                loadImageFromDataUrl(fileInfo.dataUrl);
+                            }
+                        });
+                    } else if (photoUpload) {
+                        photoUpload.click();
+                    }
+                } else if (action === 'save-file') {
+                    const downloadSingle = document.getElementById('downloadSingle');
+                    const downloadJPG = document.getElementById('downloadJPG');
+                    if (downloadSingle && downloadSingle.offsetParent !== null) {
+                        downloadSingle.click();
+                    } else if (downloadJPG && downloadJPG.offsetParent !== null) {
+                        downloadJPG.click();
+                    } else {
+                        alert('Please upload and process a photo first!');
+                    }
+                } else if (action === 'print-sheet') {
+                    window.location.href = 'print.html';
+                } else if (action === 'export-pdf') {
+                    const downloadPDF = document.getElementById('downloadPDF');
+                    if (downloadPDF) downloadPDF.click();
+                }
+            });
+        }
+    }
+
     // Constants
     const A4_WIDTH = 2480;
     const A4_HEIGHT = 3508;
@@ -218,15 +261,43 @@
     }
 
     function loadImage(file) {
+        if (!file) return;
+
+        const isImageMime = file.type && file.type.startsWith('image/');
+        const isImageExt = /\.(jpe?g|png|webp|bmp|gif|avif|tiff?)$/i.test(file.name || '');
+        if (!isImageMime && !isImageExt) {
+            alert('Please select a valid image file (JPG, PNG, WebP).');
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             originalImage = new Image();
             originalImage.onload = () => {
                 initCropper();
+                if (photoUpload) photoUpload.value = '';
+            };
+            originalImage.onerror = () => {
+                alert('Could not decode the selected image file. Please try another.');
             };
             originalImage.src = e.target.result;
         };
+        reader.onerror = () => {
+            alert('Could not read the selected image file.');
+        };
         reader.readAsDataURL(file);
+    }
+
+    function loadImageFromDataUrl(dataUrl) {
+        originalImage = new Image();
+        originalImage.onload = () => {
+            initCropper();
+            if (photoUpload) photoUpload.value = '';
+        };
+        originalImage.onerror = () => {
+            alert('Could not decode the selected image file. Please try another.');
+        };
+        originalImage.src = dataUrl;
     }
 
     // Cropper Initialization
@@ -583,111 +654,78 @@
     }
 
     // ==========================================================================
-    // Neural AI Background Removal for Pro Editor (Google MediaPipe)
+    // Studio AI Background Removal Engine & Live Controls for Pro Editor
     // ==========================================================================
-    let editorSelfieSegmenter = null;
-    let editorCachedAiMaskCanvas = null;
+    let editorChosenAiModel = 'fast'; // 'fast' (MediaPipe HD - Instant & 100% Offline) or 'ultra' (RMBG-1.4)
+    let editorCachedFloatMask = null;
+    let editorBgFeather = 16;
+    let editorBgEdgeShift = -1;
+    let editorBgDefringe = true;
 
-    function getEditorAiSegmenter() {
-        if (editorSelfieSegmenter) return Promise.resolve(editorSelfieSegmenter);
-        if (typeof SelfieSegmentation === 'undefined') {
-            return Promise.reject(new Error('MediaPipe SelfieSegmentation library not loaded'));
-        }
+    // Retouch Brush State
+    let isBrushEnabled = false;
+    let brushMode = 'erase'; // 'erase' or 'restore'
+    let brushSize = 25;
+    let isMouseDownOnCanvas = false;
 
-        return new Promise((resolve, reject) => {
-            try {
-                const segmenter = new SelfieSegmentation({
-                    locateFile: (file) => {
-                        if (window.location.protocol === 'file:') {
-                            return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
-                        }
-                        return `./lib/mediapipe/${file}`;
-                    }
-                });
+    // DOM Elements
+    const editorModelUltraChip = document.getElementById('editorModelUltraChip');
+    const editorModelFastChip = document.getElementById('editorModelFastChip');
+    const editorAiModelStatusBox = document.getElementById('editorAiModelStatusBox');
+    const editorAiModelStatusText = document.getElementById('editorAiModelStatusText');
+    const editorAiModelPercentText = document.getElementById('editorAiModelPercentText');
+    const editorAiProgressBar = document.getElementById('editorAiProgressBar');
 
-                segmenter.setOptions({
-                    modelSelection: 1,
-                });
+    const editorBgFeatherSlider = document.getElementById('editorBgFeatherSlider');
+    const editorBgFeatherVal = document.getElementById('editorBgFeatherVal');
+    const editorBgEdgeShiftSlider = document.getElementById('editorBgEdgeShiftSlider');
+    const editorBgEdgeShiftVal = document.getElementById('editorBgEdgeShiftVal');
+    const editorBgDefringeToggle = document.getElementById('editorBgDefringeToggle');
 
-                editorSelfieSegmenter = segmenter;
-                resolve(segmenter);
-            } catch (err) {
-                reject(err);
-            }
+    const toggleTouchupBrushBtn = document.getElementById('toggleTouchupBrushBtn');
+    const touchupBrushControls = document.getElementById('touchupBrushControls');
+    const brushModeErase = document.getElementById('brushModeErase');
+    const brushModeRestore = document.getElementById('brushModeRestore');
+    const brushSizeSlider = document.getElementById('brushSizeSlider');
+    const brushSizeVal = document.getElementById('brushSizeVal');
+
+    // Model Selector switching
+    if (editorModelUltraChip && editorModelFastChip) {
+        editorModelUltraChip.addEventListener('click', () => {
+            editorChosenAiModel = 'ultra';
+            editorModelUltraChip.classList.add('active');
+            editorModelFastChip.classList.remove('active');
+            const r = editorModelUltraChip.querySelector('input[type="radio"]');
+            if (r) r.checked = true;
+            editorCachedFloatMask = null;
+        });
+
+        editorModelFastChip.addEventListener('click', () => {
+            editorChosenAiModel = 'fast';
+            editorModelFastChip.classList.add('active');
+            editorModelUltraChip.classList.remove('active');
+            const r = editorModelFastChip.querySelector('input[type="radio"]');
+            if (r) r.checked = true;
+            editorCachedFloatMask = null;
         });
     }
 
-    function extractEditorAiPersonMask(sourceCanvas) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const segmenter = await getEditorAiSegmenter();
-                let hasReturned = false;
-
-                const timeoutId = setTimeout(() => {
-                    if (!hasReturned) {
-                        hasReturned = true;
-                        reject(new Error('AI segmentation timed out'));
-                    }
-                }, 15000);
-
-                segmenter.onResults((results) => {
-                    if (hasReturned) return;
-                    hasReturned = true;
-                    clearTimeout(timeoutId);
-
-                    if (results && results.segmentationMask) {
-                        const maskCanvas = document.createElement('canvas');
-                        maskCanvas.width = sourceCanvas.width;
-                        maskCanvas.height = sourceCanvas.height;
-                        const mCtx = maskCanvas.getContext('2d');
-                        mCtx.drawImage(results.segmentationMask, 0, 0, maskCanvas.width, maskCanvas.height);
-                        resolve(maskCanvas);
-                    } else {
-                        reject(new Error('Invalid mask received from AI model'));
-                    }
-                });
-
-                await segmenter.send({ image: sourceCanvas });
-            } catch (err) {
-                reject(err);
-            }
+    // Instant real-time update using cached probability mask
+    function updateEditorLiveMatte() {
+        if (!rawCroppedCanvas || !editorCachedFloatMask) return;
+        const matte = window.MattingEngine.processMatte(rawCroppedCanvas, editorCachedFloatMask, {
+            tolerance: editorBgTolerance,
+            feather: editorBgFeather,
+            edgeShift: editorBgEdgeShift,
+            defringe: editorBgDefringe,
+            fillHoles: true,
+            useGuidedFilter: true
         });
-    }
-
-    function applyEditorAiMask(sourceCanvas, maskCanvas, toleranceVal = 35) {
-        const w = sourceCanvas.width;
-        const h = sourceCanvas.height;
-
-        const outCanvas = document.createElement('canvas');
-        outCanvas.width = w;
-        outCanvas.height = h;
-        const outCtx = outCanvas.getContext('2d');
-
-        outCtx.drawImage(sourceCanvas, 0, 0);
-        const imgData = outCtx.getImageData(0, 0, w, h);
-        const pixels = imgData.data;
-
-        const mCtx = maskCanvas.getContext('2d');
-        const maskData = mCtx.getImageData(0, 0, w, h).data;
-
-        const cutoff = (toleranceVal / 100) * 255;
-        const feather = 16;
-        const minVal = Math.max(0, cutoff - feather);
-        const maxVal = Math.min(255, cutoff + feather);
-        const range = maxVal - minVal || 1;
-
-        for (let i = 0; i < pixels.length; i += 4) {
-            const conf = maskData[i];
-            if (conf <= minVal) {
-                pixels[i + 3] = 0;
-            } else if (conf < maxVal) {
-                const alphaFactor = (conf - minVal) / range;
-                pixels[i + 3] = Math.round(pixels[i + 3] * alphaFactor);
-            }
+        croppedCanvas = matte.canvas;
+        renderPreview();
+        if (a4Area && a4Area.style.display !== 'none') {
+            generateA4Layout();
         }
-
-        outCtx.putImageData(imgData, 0, 0);
-        return outCanvas;
     }
 
     if (editorAutoRemoveBgBtn) {
@@ -702,31 +740,75 @@
             }
 
             editorAutoRemoveBgBtn.disabled = true;
-            editorAutoRemoveBgBtn.innerHTML = '<span>⏳ AI Removing Background...</span>';
+            editorAutoRemoveBgBtn.innerHTML = '<span>⏳ Processing AI Cutout...</span>';
+            if (editorAiModelStatusBox) {
+                editorAiModelStatusBox.style.display = 'block';
+                if (editorAiModelStatusText) editorAiModelStatusText.textContent = 'Initializing AI model...';
+                if (editorAiProgressBar) editorAiProgressBar.style.width = '15%';
+                if (editorAiModelPercentText) editorAiModelPercentText.textContent = '';
+            }
 
             try {
-                if (!editorCachedAiMaskCanvas) {
-                    editorCachedAiMaskCanvas = await extractEditorAiPersonMask(rawCroppedCanvas);
+                if (!editorCachedFloatMask) {
+                    if (editorChosenAiModel === 'ultra' && window.MattingEngine?.extractMaskUltra) {
+                        try {
+                            const res = await window.MattingEngine.extractMaskUltra(rawCroppedCanvas, (prog) => {
+                                if (!editorAiModelStatusBox) return;
+                                if (prog.status === 'downloading' && prog.percent !== undefined) {
+                                    if (editorAiModelStatusText) editorAiModelStatusText.textContent = 'Downloading Ultra AI weights...';
+                                    if (editorAiProgressBar) editorAiProgressBar.style.width = `${prog.percent}%`;
+                                    if (editorAiModelPercentText) editorAiModelPercentText.textContent = `${prog.percent}%`;
+                                } else if (prog.status === 'processing') {
+                                    if (editorAiModelStatusText) editorAiModelStatusText.textContent = 'Analyzing portrait contours...';
+                                    if (editorAiProgressBar) editorAiProgressBar.style.width = '85%';
+                                    if (editorAiModelPercentText) editorAiModelPercentText.textContent = '';
+                                }
+                            });
+                            editorCachedFloatMask = res.floatMask;
+                        } catch (ultraErr) {
+                            console.warn('Ultra AI failed or offline, falling back to Fast AI:', ultraErr);
+                            if (editorAiModelStatusText) editorAiModelStatusText.textContent = 'Switching to Fast Studio AI...';
+                            const res = await window.MattingEngine.extractMaskFast(rawCroppedCanvas);
+                            editorCachedFloatMask = res.floatMask;
+                        }
+                    } else {
+                        if (editorAiModelStatusText) editorAiModelStatusText.textContent = 'Running Fast Studio AI...';
+                        if (editorAiProgressBar) editorAiProgressBar.style.width = '55%';
+                        const res = await window.MattingEngine.extractMaskFast(rawCroppedCanvas);
+                        editorCachedFloatMask = res.floatMask;
+                    }
                 }
 
-                croppedCanvas = applyEditorAiMask(rawCroppedCanvas, editorCachedAiMaskCanvas, editorBgTolerance);
-                editorAutoRemoveBgBtn.innerHTML = '<span>✨ AI Background Removed</span>';
+                if (editorAiModelStatusText) editorAiModelStatusText.textContent = 'Applying high-definition edge matting...';
+                if (editorAiProgressBar) editorAiProgressBar.style.width = '100%';
+
+                const matte = window.MattingEngine.processMatte(rawCroppedCanvas, editorCachedFloatMask, {
+                    tolerance: editorBgTolerance,
+                    feather: editorBgFeather,
+                    edgeShift: editorBgEdgeShift,
+                    defringe: editorBgDefringe,
+                    fillHoles: true,
+                    useGuidedFilter: true
+                });
+
+                croppedCanvas = matte.canvas;
+                editorAutoRemoveBgBtn.innerHTML = '<span>✨ Background Removed</span>';
                 if (editorResetBgBtn) editorResetBgBtn.style.display = 'inline-flex';
                 if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'block';
+                if (bgColorCard) bgColorCard.style.display = 'block';
                 renderPreview();
                 if (a4Area && a4Area.style.display !== 'none') {
                     generateA4Layout();
                 }
+
+                setTimeout(() => {
+                    if (editorAiModelStatusBox) editorAiModelStatusBox.style.display = 'none';
+                }, 800);
             } catch (err) {
-                console.warn('Pro Editor AI segmentation failed, fallback to flood-fill:', err);
-                croppedCanvas = processBackgroundRemoval(rawCroppedCanvas, editorBgTolerance);
-                editorAutoRemoveBgBtn.innerHTML = '<span>🪄 Background Removed</span>';
-                if (editorResetBgBtn) editorResetBgBtn.style.display = 'inline-flex';
-                if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'block';
-                renderPreview();
-                if (a4Area && a4Area.style.display !== 'none') {
-                    generateA4Layout();
-                }
+                console.error('Pro Editor AI segmentation failed:', err);
+                alert('Background removal could not complete: ' + (err.message || err));
+                editorAutoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+                if (editorAiModelStatusBox) editorAiModelStatusBox.style.display = 'none';
             } finally {
                 editorAutoRemoveBgBtn.disabled = false;
             }
@@ -741,10 +823,11 @@
             croppedCanvas.height = rawCroppedCanvas.height;
             const rCtx = croppedCanvas.getContext('2d');
             rCtx.drawImage(rawCroppedCanvas, 0, 0);
-            editorCachedAiMaskCanvas = null;
+            editorCachedFloatMask = null;
             editorResetBgBtn.style.display = 'none';
             if (editorBgToleranceBox) editorBgToleranceBox.style.display = 'none';
             if (editorAutoRemoveBgBtn) editorAutoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+            if (isBrushEnabled && toggleTouchupBrushBtn) toggleTouchupBrushBtn.click();
             renderPreview();
             if (a4Area && a4Area.style.display !== 'none') {
                 generateA4Layout();
@@ -752,21 +835,118 @@
         });
     }
 
+    // Live Sliders for Editor
     if (editorBgToleranceSlider) {
         editorBgToleranceSlider.addEventListener('input', (e) => {
             editorBgTolerance = parseInt(e.target.value);
             if (editorBgToleranceVal) editorBgToleranceVal.textContent = editorBgTolerance;
-            if (rawCroppedCanvas) {
-                if (editorCachedAiMaskCanvas) {
-                    croppedCanvas = applyEditorAiMask(rawCroppedCanvas, editorCachedAiMaskCanvas, editorBgTolerance);
-                } else {
-                    croppedCanvas = processBackgroundRemoval(rawCroppedCanvas, editorBgTolerance);
-                }
-                renderPreview();
-                if (a4Area && a4Area.style.display !== 'none') {
-                    generateA4Layout();
+            updateEditorLiveMatte();
+        });
+    }
+
+    if (editorBgFeatherSlider) {
+        editorBgFeatherSlider.addEventListener('input', (e) => {
+            editorBgFeather = parseInt(e.target.value);
+            if (editorBgFeatherVal) editorBgFeatherVal.textContent = `${editorBgFeather}px`;
+            updateEditorLiveMatte();
+        });
+    }
+
+    if (editorBgEdgeShiftSlider) {
+        editorBgEdgeShiftSlider.addEventListener('input', (e) => {
+            editorBgEdgeShift = parseInt(e.target.value);
+            if (editorBgEdgeShiftVal) editorBgEdgeShiftVal.textContent = `${editorBgEdgeShift > 0 ? '+' : ''}${editorBgEdgeShift}px`;
+            updateEditorLiveMatte();
+        });
+    }
+
+    if (editorBgDefringeToggle) {
+        editorBgDefringeToggle.addEventListener('change', (e) => {
+            editorBgDefringe = e.target.checked;
+            updateEditorLiveMatte();
+        });
+    }
+
+    // Retouch Brush Functionality
+    if (toggleTouchupBrushBtn) {
+        toggleTouchupBrushBtn.addEventListener('click', () => {
+            isBrushEnabled = !isBrushEnabled;
+            if (isBrushEnabled) {
+                toggleTouchupBrushBtn.classList.add('active');
+                toggleTouchupBrushBtn.innerHTML = '<span>Disable Brush</span>';
+                if (touchupBrushControls) touchupBrushControls.style.display = 'block';
+                if (previewCanvas) previewCanvas.classList.add('canvas-brush-active');
+            } else {
+                toggleTouchupBrushBtn.classList.remove('active');
+                toggleTouchupBrushBtn.innerHTML = '<span>Enable Brush</span>';
+                if (touchupBrushControls) touchupBrushControls.style.display = 'none';
+                if (previewCanvas) previewCanvas.classList.remove('canvas-brush-active');
+            }
+        });
+    }
+
+    if (brushModeErase && brushModeRestore) {
+        brushModeErase.addEventListener('click', () => {
+            brushMode = 'erase';
+            brushModeErase.classList.add('active');
+            brushModeRestore.classList.remove('active');
+        });
+        brushModeRestore.addEventListener('click', () => {
+            brushMode = 'restore';
+            brushModeRestore.classList.add('active');
+            brushModeErase.classList.remove('active');
+        });
+    }
+
+    if (brushSizeSlider) {
+        brushSizeSlider.addEventListener('input', (e) => {
+            brushSize = parseInt(e.target.value);
+            if (brushSizeVal) brushSizeVal.textContent = `${brushSize}px`;
+        });
+    }
+
+    function applyBrushStroke(e) {
+        if (!isBrushEnabled || !editorCachedFloatMask || !previewCanvas || !rawCroppedCanvas) return;
+        const rect = previewCanvas.getBoundingClientRect();
+        const scaleX = rawCroppedCanvas.width / rect.width;
+        const scaleY = rawCroppedCanvas.height / rect.height;
+
+        const imgX = Math.round((e.clientX - rect.left) * scaleX);
+        const imgY = Math.round((e.clientY - rect.top) * scaleY);
+        const imgRadius = Math.round((brushSize / 2) * scaleX);
+
+        const w = rawCroppedCanvas.width;
+        const h = rawCroppedCanvas.height;
+        const targetVal = brushMode === 'erase' ? 0.0 : 1.0;
+
+        for (let dy = -imgRadius; dy <= imgRadius; dy++) {
+            const py = imgY + dy;
+            if (py < 0 || py >= h) continue;
+            for (let dx = -imgRadius; dx <= imgRadius; dx++) {
+                const px = imgX + dx;
+                if (px < 0 || px >= w) continue;
+                if (dx * dx + dy * dy <= imgRadius * imgRadius) {
+                    editorCachedFloatMask[py * w + px] = targetVal;
                 }
             }
+        }
+        updateEditorLiveMatte();
+    }
+
+    if (previewCanvas) {
+        previewCanvas.addEventListener('mousedown', (e) => {
+            if (!isBrushEnabled) return;
+            isMouseDownOnCanvas = true;
+            applyBrushStroke(e);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseDownOnCanvas || !isBrushEnabled) return;
+            applyBrushStroke(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            isMouseDownOnCanvas = false;
         });
     }
 

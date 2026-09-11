@@ -8,6 +8,12 @@ package-lock.json
 dist/
 out/
 build/
+*.exe
+*.zip
+*.dmg
+*.AppImage
+*.deb
+*.rpm
 
 # OS files
 .DS_Store

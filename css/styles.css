@@ -2064,5 +2064,297 @@ body.dark-mode .a4-container {
         page-break-after: avoid !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+}
+
+/* ==========================================================================
+   Studio AI Background Remover & Dual Engine Selector
+   ========================================================================== */
+.ai-model-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.ai-model-chip {
+    display: block;
+    position: relative;
+    cursor: pointer;
+    border: 1.5px solid var(--border-color, #e2e8f0);
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: var(--bg-surface, #ffffff);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+.ai-model-chip:hover {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.ai-model-chip.active {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 0 0 1px var(--primary, #6366f1);
+}
+
+.ai-model-chip .chip-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ai-model-chip .chip-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ai-model-chip .chip-subtitle {
+    font-size: 10px;
+    color: var(--text-muted, #64748b);
+    font-weight: 500;
+}
+
+.ai-progress-track {
+    height: 6px;
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+#aiProgressBar,
+#editorAiProgressBar {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 4px;
+    transition: width 0.25s ease;
+}
+
+/* Touch-Up Brush Active States */
+.canvas-brush-active {
+    cursor: crosshair !important;
+}
+
+.touchup-brush-box .btn-tool.active {
+    background: var(--primary, #6366f1);
+    color: #ffffff;
+    border-color: var(--primary, #6366f1);
+}
+
+/* ==========================================================================
+   Simple Browser Photo Print Feature
+   ========================================================================== */
+.simple-print-container {
+    max-width: 760px;
+    margin: 32px auto;
+    padding: 0 16px;
+}
+
+.simple-print-card {
+    background: var(--bg-surface, #ffffff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 16px;
+    padding: 24px 28px;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.preview-stage-frame {
+    width: 100%;
+    min-height: 280px;
+    max-height: 460px;
+    background: var(--bg-tertiary, #f8fafc);
+    border: 1.5px dashed var(--border-color, #cbd5e1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    overflow: hidden;
+}
+
+.aspect-preserved-preview {
+    max-width: 100%;
+    max-height: 420px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.photo-meta-bar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--text-muted, #64748b);
+    font-weight: 600;
+    padding: 6px 10px;
+    background: var(--bg-tertiary, #f1f5f9);
+    border-radius: 6px;
+}
+
+.quality-radio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.quality-option-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border-color, #e2e8f0);
+    border-radius: 12px;
+    background: var(--bg-surface, #ffffff);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.quality-option-card:hover {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.03);
+}
+
+.quality-option-card.active {
+    border-color: var(--primary, #6366f1);
+    background: rgba(99, 102, 241, 0.06);
+    box-shadow: 0 0 0 1px var(--primary, #6366f1);
+}
+
+.quality-radio-input {
+    margin-top: 3px;
+    accent-color: var(--primary, #6366f1);
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+}
+
+.quality-option-inner {
+    flex: 1;
+}
+
+.quality-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.quality-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-primary, #0f172a);
+}
+
+.quality-tag {
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.quality-tag.recommended {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary, #6366f1);
+}
+
+.quality-tag.premium {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+}
+
+.quality-desc {
+    font-size: 12px;
+    color: var(--text-muted, #64748b);
+    line-height: 1.45;
+    margin: 0;
+}
+
+/* Hidden Print Target for Simple Print */
+.print-only-container {
+    display: none;
+}
+
+/* Print Specific Rules for Clean Direct Photo Output */
+@media print {
+    /* If #printTarget contains an active image, hide all UI */
+    body:has(#printTargetImage[src]:not([src=""])) .studio-nav,
+    body:has(#printTargetImage[src]:not([src=""])) .studio-hero,
+    body:has(#printTargetImage[src]:not([src=""])) .simple-print-container,
+    body:has(#printTargetImage[src]:not([src=""])) .studio-workspace,
+    body:has(#printTargetImage[src]:not([src=""])) .app-footer,
+    body:has(#printTargetImage[src]:not([src=""])) header,
+    body:has(#printTargetImage[src]:not([src=""])) footer,
+    body:has(#printTargetImage[src]:not([src=""])) .floating-action-bar {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    body:has(#printTargetImage[src]:not([src=""])) {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    body:has(#printTargetImage[src]:not([src=""])) #printTarget {
+        display: flex !important;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #ffffff !important;
+        z-index: 999999 !important;
+    }
+
+    #printTargetImage {
+        max-width: 100% !important;
+        max-height: 100% !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+        display: block !important;
+        margin: auto !important;
+        page-break-inside: avoid !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Print Quality-Specific Rendering */
+    #printTargetImage.print-render-standard {
+        image-rendering: auto !important;
+    }
+
+    #printTargetImage.print-render-high {
+        image-rendering: -webkit-optimize-contrast !important;
+        image-rendering: crisp-edges !important;
+    }
+
+    #printTargetImage.print-render-best {
+        image-rendering: high-quality !important;
+        image-rendering: -webkit-optimize-contrast !important;
+        color-interpolation: sRGB !important;
     }
 }
+
+

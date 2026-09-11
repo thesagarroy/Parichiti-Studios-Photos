@@ -57,6 +57,51 @@
         localStorage.setItem('installPromptDismissed', 'true');
     });
 
+    // Windows Desktop App Integration
+    if (window.electronAPI && window.electronAPI.isElectron) {
+        if (installPrompt) {
+            installPrompt.style.display = 'none';
+        }
+        document.querySelectorAll('.status-pill').forEach(pill => {
+            pill.title = 'Parichiti Studios Windows Desktop App (100% Offline)';
+            const textSpan = pill.querySelector('span:last-child');
+            if (textSpan) textSpan.textContent = 'Windows App • 100% Offline';
+        });
+
+        if (window.electronAPI.onMenuAction) {
+            window.electronAPI.onMenuAction((action) => {
+                if (action === 'open-file') {
+                    if (window.electronAPI.openFileDialog) {
+                        window.electronAPI.openFileDialog().then(fileInfo => {
+                            if (fileInfo && fileInfo.dataUrl) {
+                                loadPhotoFromDataUrl(fileInfo.dataUrl, fileInfo.fileName);
+                            }
+                        });
+                    } else if (photoUpload) {
+                        photoUpload.click();
+                    }
+                } else if (action === 'save-file') {
+                    if (generateBtn && !generateBtn.disabled) {
+                        generatePDF();
+                    } else {
+                        alert('Please upload a photo first to generate your A4 sheet!');
+                    }
+                } else if (action === 'print-sheet') {
+                    const printButton = document.getElementById('printBtn');
+                    if (printButton && printButton.style.display !== 'none') {
+                        printButton.click();
+                    } else if (window.electronAPI.printSheet) {
+                        window.electronAPI.printSheet();
+                    }
+                } else if (action === 'export-pdf') {
+                    if (generateBtn && !generateBtn.disabled) {
+                        generatePDF();
+                    }
+                }
+            });
+        }
+    }
+
     // A4 dimensions in pixels at 300 DPI
     const A4_WIDTH = 2480;
     const A4_HEIGHT = 3508;
@@ -232,214 +277,65 @@
     }
 
     // ==========================================================================
-    // Neural AI Background Removal (Google MediaPipe Selfie Segmentation)
+    // Studio AI Background Removal Engine & Live Controls
     // ==========================================================================
-    let selfieSegmenter = null;
-    let cachedAiMaskCanvas = null;
+    let chosenAiModel = 'fast'; // 'fast' (MediaPipe HD - Instant & 100% Offline) or 'ultra' (RMBG-1.4)
+    let cachedFloatMask = null;
+    let bgFeather = 16;
+    let bgEdgeShift = -1;
+    let bgDefringe = true;
 
-    function getAiSegmenter() {
-        if (selfieSegmenter) return Promise.resolve(selfieSegmenter);
-        if (typeof SelfieSegmentation === 'undefined') {
-            return Promise.reject(new Error('MediaPipe SelfieSegmentation library not loaded'));
-        }
+    // DOM Elements for AI Engine & Controls
+    const modelUltraChip = document.getElementById('modelUltraChip');
+    const modelFastChip = document.getElementById('modelFastChip');
+    const aiModelStatusBox = document.getElementById('aiModelStatusBox');
+    const aiModelStatusText = document.getElementById('aiModelStatusText');
+    const aiModelPercentText = document.getElementById('aiModelPercentText');
+    const aiProgressBar = document.getElementById('aiProgressBar');
 
-        return new Promise((resolve, reject) => {
-            try {
-                const segmenter = new SelfieSegmentation({
-                    locateFile: (file) => {
-                        if (window.location.protocol === 'file:') {
-                            return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
-                        }
-                        return `./lib/mediapipe/${file}`;
-                    }
-                });
+    const bgFeatherSlider = document.getElementById('bgFeatherSlider');
+    const bgFeatherVal = document.getElementById('bgFeatherVal');
+    const bgEdgeShiftSlider = document.getElementById('bgEdgeShiftSlider');
+    const bgEdgeShiftVal = document.getElementById('bgEdgeShiftVal');
+    const bgDefringeToggle = document.getElementById('bgDefringeToggle');
 
-                segmenter.setOptions({
-                    modelSelection: 1, // 1 = High-accuracy model for portraits/selfies
-                });
+    // Model Selector switcher
+    if (modelUltraChip && modelFastChip) {
+        modelUltraChip.addEventListener('click', () => {
+            chosenAiModel = 'ultra';
+            modelUltraChip.classList.add('active');
+            modelFastChip.classList.remove('active');
+            const r = modelUltraChip.querySelector('input[type="radio"]');
+            if (r) r.checked = true;
+            // Clear cache if user purposefully switches model
+            cachedFloatMask = null;
+        });
 
-                selfieSegmenter = segmenter;
-                resolve(segmenter);
-            } catch (err) {
-                reject(err);
-            }
+        modelFastChip.addEventListener('click', () => {
+            chosenAiModel = 'fast';
+            modelFastChip.classList.add('active');
+            modelUltraChip.classList.remove('active');
+            const r = modelFastChip.querySelector('input[type="radio"]');
+            if (r) r.checked = true;
+            // Clear cache if user purposefully switches model
+            cachedFloatMask = null;
         });
     }
 
-    // Runs neural network and returns mask as an offscreen canvas
-    function extractAiPersonMask(sourceElement) {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const segmenter = await getAiSegmenter();
-                let hasReturned = false;
-
-                const timeoutId = setTimeout(() => {
-                    if (!hasReturned) {
-                        hasReturned = true;
-                        reject(new Error('AI segmentation timed out'));
-                    }
-                }, 15000);
-
-                segmenter.onResults((results) => {
-                    if (hasReturned) return;
-                    hasReturned = true;
-                    clearTimeout(timeoutId);
-
-                    if (results && results.segmentationMask) {
-                        const maskCanvas = document.createElement('canvas');
-                        maskCanvas.width = sourceElement.naturalWidth || sourceElement.width || 800;
-                        maskCanvas.height = sourceElement.naturalHeight || sourceElement.height || 800;
-                        const mCtx = maskCanvas.getContext('2d');
-                        mCtx.drawImage(results.segmentationMask, 0, 0, maskCanvas.width, maskCanvas.height);
-                        resolve(maskCanvas);
-                    } else {
-                        reject(new Error('Invalid mask received from AI model'));
-                    }
-                });
-
-                await segmenter.send({ image: sourceElement });
-            } catch (err) {
-                reject(err);
-            }
+    // Instant real-time update using cached probability mask
+    function updateLiveMatte() {
+        if (!uploadedImages.length || !rawOriginalImage || !cachedFloatMask) return;
+        const matte = window.MattingEngine.processMatte(rawOriginalImage, cachedFloatMask, {
+            tolerance: bgTolerance,
+            feather: bgFeather,
+            edgeShift: bgEdgeShift,
+            defringe: bgDefringe,
+            fillHoles: true,
+            useGuidedFilter: true
         });
-    }
-
-    // Applies AI mask to source image with soft anti-aliased alpha feathering
-    function applyAiMaskToImage(sourceImg, maskCanvas, toleranceVal = 35) {
-        const w = sourceImg.naturalWidth || sourceImg.width;
-        const h = sourceImg.naturalHeight || sourceImg.height;
-
-        const outCanvas = document.createElement('canvas');
-        outCanvas.width = w;
-        outCanvas.height = h;
-        const outCtx = outCanvas.getContext('2d');
-
-        // Draw original photo
-        outCtx.drawImage(sourceImg, 0, 0, w, h);
-        const imgData = outCtx.getImageData(0, 0, w, h);
-        const pixels = imgData.data;
-
-        // Get mask pixels
-        const mCtx = maskCanvas.getContext('2d');
-        const maskData = mCtx.getImageData(0, 0, w, h).data;
-
-        // Map tolerance (10 to 80) to mask threshold (0 to 255)
-        const cutoff = (toleranceVal / 100) * 255;
-        const feather = 16; // soft alpha feathering for natural hair outlines
-        const minVal = Math.max(0, cutoff - feather);
-        const maxVal = Math.min(255, cutoff + feather);
-        const range = maxVal - minVal || 1;
-
-        for (let i = 0; i < pixels.length; i += 4) {
-            const conf = maskData[i]; // red channel of mask contains confidence
-            if (conf <= minVal) {
-                pixels[i + 3] = 0; // 100% transparent backdrop
-            } else if (conf < maxVal) {
-                // Smooth feathered anti-aliasing on borders
-                const alphaFactor = (conf - minVal) / range;
-                pixels[i + 3] = Math.round(pixels[i + 3] * alphaFactor);
-            }
-            // else keep 100% opaque foreground person
-        }
-
-        outCtx.putImageData(imgData, 0, 0);
-        return outCanvas;
-    }
-
-    // Fallback Client-Side Background Eraser
-    function processBackgroundRemovalFallback(sourceImg, tolerance = 35) {
-        const w = sourceImg.naturalWidth || sourceImg.width;
-        const h = sourceImg.naturalHeight || sourceImg.height;
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = w;
-        tempCanvas.height = h;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(sourceImg, 0, 0);
-
-        const imgData = tempCtx.getImageData(0, 0, w, h);
-        const data = imgData.data;
-
-        // Sample background from corners and top margin
-        const samplePoints = [
-            [2, 2], [w - 3, 2],
-            [Math.floor(w * 0.25), 2], [Math.floor(w * 0.5), 2], [Math.floor(w * 0.75), 2],
-            [2, Math.floor(h * 0.25)], [w - 3, Math.floor(h * 0.25)]
-        ];
-
-        let rSum = 0, gSum = 0, bSum = 0, count = 0;
-        for (const [sx, sy] of samplePoints) {
-            if (sx >= 0 && sx < w && sy >= 0 && sy < h) {
-                const i = (sy * w + sx) * 4;
-                rSum += data[i];
-                gSum += data[i + 1];
-                bSum += data[i + 2];
-                count++;
-            }
-        }
-
-        const bgR = rSum / (count || 1);
-        const bgG = gSum / (count || 1);
-        const bgB = bSum / (count || 1);
-
-        const tolSq = tolerance * tolerance;
-        const featherStart = tolerance * 0.65;
-        const featherStartSq = featherStart * featherStart;
-
-        const visited = new Uint8Array(w * h);
-        const queue = [];
-
-        // Start flood-fill from top border and side borders
-        for (let x = 0; x < w; x++) {
-            queue.push(x, 0);
-            visited[x] = 1;
-        }
-        const maxH = Math.floor(h * 0.9);
-        for (let y = 1; y < maxH; y++) {
-            queue.push(0, y);
-            visited[y * w] = 1;
-            queue.push(w - 1, y);
-            visited[y * w + (w - 1)] = 1;
-        }
-
-        let head = 0;
-        while (head < queue.length) {
-            const cx = queue[head++];
-            const cy = queue[head++];
-            const cIdx = (cy * w + cx) * 4;
-
-            const dr = data[cIdx] - bgR;
-            const dg = data[cIdx + 1] - bgG;
-            const db = data[cIdx + 2] - bgB;
-            const distSq = dr * dr + dg * dg + db * db;
-
-            if (distSq <= tolSq) {
-                if (distSq <= featherStartSq) {
-                    data[cIdx + 3] = 0;
-                } else {
-                    const dist = Math.sqrt(distSq);
-                    const alpha = Math.floor(((dist - featherStart) / (tolerance - featherStart)) * 255);
-                    data[cIdx + 3] = Math.min(data[cIdx + 3], alpha);
-                }
-
-                const neighbors = [
-                    [cx + 1, cy], [cx - 1, cy],
-                    [cx, cy + 1], [cx, cy - 1]
-                ];
-
-                for (const [nx, ny] of neighbors) {
-                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                        const nPos = ny * w + nx;
-                        if (!visited[nPos]) {
-                            visited[nPos] = 1;
-                            queue.push(nx, ny);
-                        }
-                    }
-                }
-            }
-        }
-
-        tempCtx.putImageData(imgData, 0, 0);
-        return tempCanvas;
+        uploadedImages[0].image = matte.canvas;
+        renderPreview();
+        updateImageList();
     }
 
     if (autoRemoveBgBtn) {
@@ -449,31 +345,72 @@
             const sourceImg = rawOriginalImage || target.image;
 
             autoRemoveBgBtn.disabled = true;
-            autoRemoveBgBtn.innerHTML = '<span>⏳ AI Removing Background...</span>';
+            autoRemoveBgBtn.innerHTML = '<span>⏳ Processing AI Cutout...</span>';
+            if (aiModelStatusBox) {
+                aiModelStatusBox.style.display = 'block';
+                if (aiModelStatusText) aiModelStatusText.textContent = 'Initializing AI model...';
+                if (aiProgressBar) aiProgressBar.style.width = '15%';
+                if (aiModelPercentText) aiModelPercentText.textContent = '';
+            }
 
             try {
-                if (!cachedAiMaskCanvas) {
-                    cachedAiMaskCanvas = await extractAiPersonMask(sourceImg);
+                if (!cachedFloatMask) {
+                    if (chosenAiModel === 'ultra' && window.MattingEngine?.extractMaskUltra) {
+                        try {
+                            const res = await window.MattingEngine.extractMaskUltra(sourceImg, (prog) => {
+                                if (!aiModelStatusBox) return;
+                                if (prog.status === 'downloading' && prog.percent !== undefined) {
+                                    if (aiModelStatusText) aiModelStatusText.textContent = 'Downloading Ultra AI weights...';
+                                    if (aiProgressBar) aiProgressBar.style.width = `${prog.percent}%`;
+                                    if (aiModelPercentText) aiModelPercentText.textContent = `${prog.percent}%`;
+                                } else if (prog.status === 'processing') {
+                                    if (aiModelStatusText) aiModelStatusText.textContent = 'Analyzing portrait contours...';
+                                    if (aiProgressBar) aiProgressBar.style.width = '85%';
+                                    if (aiModelPercentText) aiModelPercentText.textContent = '';
+                                }
+                            });
+                            cachedFloatMask = res.floatMask;
+                        } catch (ultraErr) {
+                            console.warn('Ultra AI failed or offline, falling back to Fast AI:', ultraErr);
+                            if (aiModelStatusText) aiModelStatusText.textContent = 'Switching to Fast Studio AI...';
+                            const res = await window.MattingEngine.extractMaskFast(sourceImg);
+                            cachedFloatMask = res.floatMask;
+                        }
+                    } else {
+                        if (aiModelStatusText) aiModelStatusText.textContent = 'Running Fast Studio AI...';
+                        if (aiProgressBar) aiProgressBar.style.width = '55%';
+                        const res = await window.MattingEngine.extractMaskFast(sourceImg);
+                        cachedFloatMask = res.floatMask;
+                    }
                 }
 
-                const processedCanvas = applyAiMaskToImage(sourceImg, cachedAiMaskCanvas, bgTolerance);
-                target.image = processedCanvas;
+                if (aiModelStatusText) aiModelStatusText.textContent = 'Applying high-definition edge matting...';
+                if (aiProgressBar) aiProgressBar.style.width = '100%';
 
-                autoRemoveBgBtn.innerHTML = '<span>✨ AI Background Removed</span>';
+                const matte = window.MattingEngine.processMatte(sourceImg, cachedFloatMask, {
+                    tolerance: bgTolerance,
+                    feather: bgFeather,
+                    edgeShift: bgEdgeShift,
+                    defringe: bgDefringe,
+                    fillHoles: true,
+                    useGuidedFilter: true
+                });
+
+                target.image = matte.canvas;
+                autoRemoveBgBtn.innerHTML = '<span>✨ Background Removed</span>';
                 if (resetBgBtn) resetBgBtn.style.display = 'inline-flex';
                 if (bgToleranceBox) bgToleranceBox.style.display = 'block';
                 renderPreview();
                 updateImageList();
+
+                setTimeout(() => {
+                    if (aiModelStatusBox) aiModelStatusBox.style.display = 'none';
+                }, 800);
             } catch (err) {
-                console.warn('AI segmentation failed, falling back to flood-fill:', err);
-                const fallbackCanvas = processBackgroundRemovalFallback(sourceImg, bgTolerance);
-                target.image = fallbackCanvas;
-
-                autoRemoveBgBtn.innerHTML = '<span>🪄 Background Removed</span>';
-                if (resetBgBtn) resetBgBtn.style.display = 'inline-flex';
-                if (bgToleranceBox) bgToleranceBox.style.display = 'block';
-                renderPreview();
-                updateImageList();
+                console.error('AI background removal error:', err);
+                alert('Background removal could not complete: ' + (err.message || err));
+                autoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+                if (aiModelStatusBox) aiModelStatusBox.style.display = 'none';
             } finally {
                 autoRemoveBgBtn.disabled = false;
             }
@@ -484,7 +421,7 @@
         resetBgBtn.addEventListener('click', () => {
             if (uploadedImages.length === 0 || !rawOriginalImage) return;
             uploadedImages[0].image = rawOriginalImage;
-            cachedAiMaskCanvas = null;
+            cachedFloatMask = null;
             resetBgBtn.style.display = 'none';
             if (bgToleranceBox) bgToleranceBox.style.display = 'none';
             if (autoRemoveBgBtn) autoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
@@ -493,21 +430,35 @@
         });
     }
 
+    // Live Slider Events (Zero re-inference delay)
     if (bgToleranceSlider) {
         bgToleranceSlider.addEventListener('input', (e) => {
             bgTolerance = parseInt(e.target.value);
             if (bgToleranceVal) bgToleranceVal.textContent = bgTolerance;
-            if (uploadedImages.length > 0 && rawOriginalImage) {
-                if (cachedAiMaskCanvas) {
-                    const processedCanvas = applyAiMaskToImage(rawOriginalImage, cachedAiMaskCanvas, bgTolerance);
-                    uploadedImages[0].image = processedCanvas;
-                    renderPreview();
-                } else {
-                    const processedCanvas = processBackgroundRemovalFallback(rawOriginalImage, bgTolerance);
-                    uploadedImages[0].image = processedCanvas;
-                    renderPreview();
-                }
-            }
+            updateLiveMatte();
+        });
+    }
+
+    if (bgFeatherSlider) {
+        bgFeatherSlider.addEventListener('input', (e) => {
+            bgFeather = parseInt(e.target.value);
+            if (bgFeatherVal) bgFeatherVal.textContent = `${bgFeather}px`;
+            updateLiveMatte();
+        });
+    }
+
+    if (bgEdgeShiftSlider) {
+        bgEdgeShiftSlider.addEventListener('input', (e) => {
+            bgEdgeShift = parseInt(e.target.value);
+            if (bgEdgeShiftVal) bgEdgeShiftVal.textContent = `${bgEdgeShift > 0 ? '+' : ''}${bgEdgeShift}px`;
+            updateLiveMatte();
+        });
+    }
+
+    if (bgDefringeToggle) {
+        bgDefringeToggle.addEventListener('change', (e) => {
+            bgDefringe = e.target.checked;
+            updateLiveMatte();
         });
     }
 
@@ -737,7 +688,7 @@
             const img = new Image();
             img.onload = function() {
                 rawOriginalImage = img;
-                cachedAiMaskCanvas = null;
+                cachedFloatMask = null;
                 if (resetBgBtn) resetBgBtn.style.display = 'none';
                 if (bgToleranceBox) bgToleranceBox.style.display = 'none';
                 if (autoRemoveBgBtn) autoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
@@ -751,6 +702,8 @@
                 });
                 
                 if (photoAdjustCard) photoAdjustCard.style.display = 'block';
+                if (canvasEmptyState) canvasEmptyState.style.display = 'none';
+                if (canvas) canvas.style.display = 'block';
                 
                 renderPreview();
                 updateImageList();
@@ -759,9 +712,45 @@
                 // Reset file input to allow same file upload again
                 photoUpload.value = '';
             };
+            img.onerror = function() {
+                alert('Could not decode image. Please choose a valid image file.');
+            };
             img.src = e.target.result;
         };
+        reader.onerror = function() {
+            alert('Failed to read selected image file.');
+        };
         reader.readAsDataURL(file);
+    }
+
+    function loadPhotoFromDataUrl(dataUrl, fileName) {
+        const img = new Image();
+        img.onload = function() {
+            rawOriginalImage = img;
+            cachedFloatMask = null;
+            if (resetBgBtn) resetBgBtn.style.display = 'none';
+            if (bgToleranceBox) bgToleranceBox.style.display = 'none';
+            if (autoRemoveBgBtn) autoRemoveBgBtn.innerHTML = '<span>🪄 Remove Background</span>';
+
+            uploadedImages.push({
+                image: img,
+                rawOriginal: img,
+                name: fileName || 'photo.jpg',
+                count: 8
+            });
+
+            if (photoAdjustCard) photoAdjustCard.style.display = 'block';
+            if (canvasEmptyState) canvasEmptyState.style.display = 'none';
+            if (canvas) canvas.style.display = 'block';
+
+            renderPreview();
+            updateImageList();
+            generateBtn.disabled = false;
+        };
+        img.onerror = function() {
+            alert('Could not decode image from selected file.');
+        };
+        img.src = dataUrl;
     }
 
     function updateImageList() {

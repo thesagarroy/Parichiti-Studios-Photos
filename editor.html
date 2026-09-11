@@ -97,6 +97,9 @@
                     <span class="pill-dot"></span>
                     <span>🎨 Pro Editor</span>
                 </a>
+                <a href="print.html" class="nav-pill">
+                    <span>🖨️ Photo Print</span>
+                </a>
             </nav>
 
             <div class="nav-actions">
@@ -195,10 +198,39 @@
                 <!-- Smart Background Removal Tool in Pro Editor -->
                 <div class="bg-remover-wrapper" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">🪄 Smart Background Remover</span>
-                        <span class="badge-pill-soft">100% Offline</span>
+                        <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">🪄 Studio AI Background Remover</span>
+                        <span class="badge-pill-soft" style="background: rgba(99, 102, 241, 0.12); color: var(--primary);">🤖 Dual Engine</span>
                     </div>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Automatically erase backdrop so your selected color fills behind your portrait.</p>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">Select AI engine & remove background with high-definition edge matting & anti-halo.</p>
+
+                    <!-- AI Model Selection Chips -->
+                    <div class="ai-model-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+                        <label class="ai-model-chip active" id="editorModelFastChip">
+                            <input type="radio" name="editorAiModelChoice" value="fast" checked style="display: none;" />
+                            <div class="chip-inner">
+                                <span class="chip-title">⚡ Smart Studio AI</span>
+                                <span class="chip-subtitle">Instant & 100% Offline</span>
+                            </div>
+                        </label>
+                        <label class="ai-model-chip" id="editorModelUltraChip">
+                            <input type="radio" name="editorAiModelChoice" value="ultra" style="display: none;" />
+                            <div class="chip-inner">
+                                <span class="chip-title">🌟 Ultra Studio AI</span>
+                                <span class="chip-subtitle">1024px HD Model</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- Progress / Status Indicator -->
+                    <div id="editorAiModelStatusBox" style="display: none; margin-bottom: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(99, 102, 241, 0.08); font-size: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span id="editorAiModelStatusText" style="font-weight: 600; color: var(--primary);">Preparing AI model...</span>
+                            <span id="editorAiModelPercentText" style="font-weight: 700; color: var(--primary);"></span>
+                        </div>
+                        <div class="ai-progress-track" style="height: 6px; background: rgba(99, 102, 241, 0.2); border-radius: 4px; overflow: hidden;">
+                            <div id="editorAiProgressBar" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.2s ease;"></div>
+                        </div>
+                    </div>
                     
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button type="button" class="btn-tool btn-remove-bg" id="editorAutoRemoveBgBtn">
@@ -209,13 +241,75 @@
                         </button>
                     </div>
 
-                    <div id="editorBgToleranceBox" style="display: none; margin-top: 10px;">
-                        <div class="slider-group">
-                            <label>
-                                <span>Sensitivity (Tolerance):</span>
+                    <!-- Fine-Tuning & Edge Matting Controls -->
+                    <div id="editorBgToleranceBox" style="display: none; margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--bg-tertiary, rgba(241, 245, 249, 0.6)); border: 1px solid var(--border-color);">
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                            <span>🎛️ Real-Time Edge & Matting Controls</span>
+                            <span style="font-size: 10px; background: rgba(99, 102, 241, 0.15); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-weight: 600;">Live</span>
+                        </div>
+
+                        <!-- Sensitivity / Cutoff Slider -->
+                        <div class="slider-group" style="margin-bottom: 8px;">
+                            <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                <span>Sensitivity (Cutoff):</span>
                                 <span id="editorBgToleranceVal" style="font-weight: 700; color: var(--primary);">35</span>
                             </label>
                             <input type="range" id="editorBgToleranceSlider" min="10" max="80" value="35" step="1" />
+                        </div>
+
+                        <!-- Edge Feather / Softness Slider -->
+                        <div class="slider-group" style="margin-bottom: 8px;">
+                            <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                <span>Edge Softness (Feather):</span>
+                                <span id="editorBgFeatherVal" style="font-weight: 700; color: var(--primary);">16px</span>
+                            </label>
+                            <input type="range" id="editorBgFeatherSlider" min="2" max="36" value="16" step="1" />
+                        </div>
+
+                        <!-- Edge Shift / Trim Slider -->
+                        <div class="slider-group" style="margin-bottom: 8px;">
+                            <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                <span>Edge Trim (Contract / Shave):</span>
+                                <span id="editorBgEdgeShiftVal" style="font-weight: 700; color: var(--primary);">-1px</span>
+                            </label>
+                            <input type="range" id="editorBgEdgeShiftSlider" min="-4" max="4" value="-1" step="1" />
+                        </div>
+
+                        <!-- Anti-Halo Defringe Checkbox -->
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                            <input type="checkbox" id="editorBgDefringeToggle" checked style="accent-color: var(--primary); width: 15px; height: 15px; cursor: pointer;" />
+                            <label for="editorBgDefringeToggle" style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; margin: 0;">
+                                ✨ Anti-Halo (Remove wall color bleed from hair/edges)
+                            </label>
+                        </div>
+
+                        <!-- Manual Touch-Up Brush Section -->
+                        <div class="touchup-brush-box" style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--border-color);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-primary);">🖌️ Manual Touch-Up Brush</span>
+                                <button type="button" id="toggleTouchupBrushBtn" class="btn-outline" style="padding: 3px 8px; font-size: 11px;">
+                                    <span>Enable Brush</span>
+                                </button>
+                            </div>
+                            
+                            <div id="touchupBrushControls" style="display: none;">
+                                <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                                    <button type="button" id="brushModeErase" class="btn-tool active" style="flex: 1; padding: 6px 8px; font-size: 11px;">
+                                        <span>🧹 Erase BG</span>
+                                    </button>
+                                    <button type="button" id="brushModeRestore" class="btn-tool" style="flex: 1; padding: 6px 8px; font-size: 11px;">
+                                        <span>🩹 Restore Body</span>
+                                    </button>
+                                </div>
+                                <div class="slider-group">
+                                    <label style="display: flex; justify-content: space-between; font-size: 11px;">
+                                        <span>Brush Size:</span>
+                                        <span id="brushSizeVal" style="font-weight: 700; color: var(--primary);">25px</span>
+                                    </label>
+                                    <input type="range" id="brushSizeSlider" min="8" max="70" value="25" step="1" />
+                                </div>
+                                <p style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;">Click & drag on the preview canvas to touch up fine spots.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -524,6 +618,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="lib/mediapipe/selfie_segmentation.js"></script>
+    <script src="js/mattingEngine.js"></script>
     <script src="js/editor.js"></script>
 </body>
 </html>
